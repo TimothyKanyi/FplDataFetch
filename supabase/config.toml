@@ -1,0 +1,7 @@
+project_id = "jbgtjqscykwjnuofxysz"
+
+[functions.fetch-league-data]
+verify_jwt = false
+
+[functions.generate-excel]
+verify_jwt = false
