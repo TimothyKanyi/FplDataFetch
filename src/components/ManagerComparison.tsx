@@ -4,6 +4,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Users } from "lucide-react";
 
+interface Chip {
+  name: string;
+  time: string;
+  event: number;
+}
+
 interface Manager {
   rank: number;
   entry: number;
@@ -11,6 +17,7 @@ interface Manager {
   player_name: string;
   total: number;
   gameweek_points: { [key: string]: number };
+  chips: Chip[];
 }
 
 interface ManagerComparisonProps {

@@ -5,6 +5,12 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+interface Chip {
+  name: string;
+  time: string;
+  event: number;
+}
+
 interface Manager {
   rank: number;
   entry: number;
@@ -12,6 +18,7 @@ interface Manager {
   player_name: string;
   total: number;
   gameweek_points: { [key: string]: number };
+  chips: Chip[];
 }
 
 interface GameweekChampion {
@@ -89,6 +96,10 @@ serve(async (req) => {
           }
         }
         
+        // Filter chips within the gameweek range
+        const chipsInRange = (history.chips || [])
+          .filter((chip: Chip) => chip.event >= startGW && chip.event <= endGW);
+        
         managersWithHistory.push({
           rank: manager.rank,
           entry: manager.entry,
@@ -96,6 +107,7 @@ serve(async (req) => {
           player_name: manager.player_name,
           total: manager.total,
           gameweek_points: gameweekPoints,
+          chips: chipsInRange,
         });
       } catch (error) {
         console.error(`Error fetching history for entry ${manager.entry}:`, error);

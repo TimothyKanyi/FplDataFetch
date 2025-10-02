@@ -2,6 +2,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Award, TrendingUp, Target } from "lucide-react";
 
+interface Chip {
+  name: string;
+  time: string;
+  event: number;
+}
+
 interface Manager {
   rank: number;
   entry: number;
@@ -9,6 +15,7 @@ interface Manager {
   player_name: string;
   total: number;
   gameweek_points: { [key: string]: number };
+  chips: Chip[];
 }
 
 interface GameweekChampion {

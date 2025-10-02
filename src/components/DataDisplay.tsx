@@ -2,10 +2,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Trophy, BarChart3, Users, TrendingUp } from "lucide-react";
+import { Trophy, BarChart3, Users, TrendingUp, Zap } from "lucide-react";
 import { PerformanceChart } from "./PerformanceChart";
 import { ManagerComparison } from "./ManagerComparison";
 import { Statistics } from "./Statistics";
+import { ChipsUsed } from "./ChipsUsed";
+
+interface Chip {
+  name: string;
+  time: string;
+  event: number;
+}
 
 interface Manager {
   rank: number;
@@ -14,6 +21,7 @@ interface Manager {
   player_name: string;
   total: number;
   gameweek_points: { [key: string]: number };
+  chips: Chip[];
 }
 
 interface GameweekChampion {
@@ -43,7 +51,7 @@ export const DataDisplay = ({ leagueData, gameweekChampions }: DataDisplayProps)
 
   return (
     <Tabs defaultValue="standings" className="space-y-6">
-      <TabsList className="grid w-full grid-cols-4">
+      <TabsList className="grid w-full grid-cols-5">
         <TabsTrigger value="standings" className="flex items-center gap-2">
           <Trophy className="h-4 w-4" />
           <span className="hidden sm:inline">Standings</span>
@@ -59,6 +67,10 @@ export const DataDisplay = ({ leagueData, gameweekChampions }: DataDisplayProps)
         <TabsTrigger value="stats" className="flex items-center gap-2">
           <TrendingUp className="h-4 w-4" />
           <span className="hidden sm:inline">Stats</span>
+        </TabsTrigger>
+        <TabsTrigger value="chips" className="flex items-center gap-2">
+          <Zap className="h-4 w-4" />
+          <span className="hidden sm:inline">Chips</span>
         </TabsTrigger>
       </TabsList>
 
@@ -173,6 +185,10 @@ export const DataDisplay = ({ leagueData, gameweekChampions }: DataDisplayProps)
 
       <TabsContent value="stats">
         <Statistics leagueData={leagueData} gameweekChampions={gameweekChampions} />
+      </TabsContent>
+
+      <TabsContent value="chips">
+        <ChipsUsed leagueData={leagueData} />
       </TabsContent>
     </Tabs>
   );

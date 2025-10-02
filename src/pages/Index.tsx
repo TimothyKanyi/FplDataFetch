@@ -6,6 +6,12 @@ import { ThemeProvider } from "next-themes";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
+interface Chip {
+  name: string;
+  time: string;
+  event: number;
+}
+
 interface Manager {
   rank: number;
   entry: number;
@@ -13,6 +19,7 @@ interface Manager {
   player_name: string;
   total: number;
   gameweek_points: { [key: string]: number };
+  chips: Chip[];
 }
 
 interface GameweekChampion {
