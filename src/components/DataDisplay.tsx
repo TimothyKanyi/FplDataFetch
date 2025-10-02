@@ -37,6 +37,10 @@ export const DataDisplay = ({ leagueData, gameweekChampions }: DataDisplayProps)
     ? Object.keys(leagueData[0].gameweek_points).sort((a, b) => Number(a) - Number(b))
     : [];
 
+  const getMaxPointsForGameweek = (gw: string) => {
+    return Math.max(...leagueData.map(m => m.gameweek_points[gw] || 0));
+  };
+
   return (
     <Tabs defaultValue="standings" className="space-y-6">
       <TabsList className="grid w-full grid-cols-4">
@@ -91,11 +95,19 @@ export const DataDisplay = ({ leagueData, gameweekChampions }: DataDisplayProps)
                         <TableCell>{manager.player_name}</TableCell>
                         <TableCell>{manager.entry_name}</TableCell>
                         <TableCell className="text-right font-bold">{manager.total}</TableCell>
-                        {gameweeks.map((gw) => (
-                          <TableCell key={gw} className="text-right">
-                            {manager.gameweek_points[gw] || 0}
-                          </TableCell>
-                        ))}
+                        {gameweeks.map((gw) => {
+                          const points = manager.gameweek_points[gw] || 0;
+                          const maxPoints = getMaxPointsForGameweek(gw);
+                          const isHighest = points === maxPoints && points > 0;
+                          return (
+                            <TableCell 
+                              key={gw} 
+                              className={`text-right ${isHighest ? "font-bold text-accent bg-accent/10" : ""}`}
+                            >
+                              {points}
+                            </TableCell>
+                          );
+                        })}
                       </TableRow>
                     ))}
                   </TableBody>
