@@ -3,7 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Download, Search, Loader2, X } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Download, Search, Loader2, X, AlertCircle } from "lucide-react";
 
 interface LeagueFormProps {
   onFetch: (leagueCode: string, startGW: number, endGW: number) => Promise<void>;
@@ -37,6 +38,12 @@ export const LeagueForm = ({ onFetch, onDownload, isLoading, onCancel }: LeagueF
         </CardDescription>
       </CardHeader>
       <CardContent>
+        <Alert className="mb-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            This tool only processes leagues with 150 managers or fewer due to API rate limits.
+          </AlertDescription>
+        </Alert>
         <form onSubmit={handleFetch} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="leagueCode">League Code</Label>

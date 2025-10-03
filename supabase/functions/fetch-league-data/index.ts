@@ -81,6 +81,17 @@ serve(async (req) => {
 
     console.log(`Fetched ${allManagers.length} managers`);
 
+    // Limit to 150 managers to prevent API rate limiting and timeouts
+    if (allManagers.length > 150) {
+      return new Response(
+        JSON.stringify({ error: `League has ${allManagers.length} managers. This tool only supports leagues with 150 managers or fewer.` }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
     // Fetch gameweek history for each manager
     const managersWithHistory: Manager[] = [];
     
