@@ -1,6 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Zap } from "lucide-react";
 
@@ -54,8 +54,8 @@ export const ChipsUsed = ({ leagueData }: ChipsUsedProps) => {
       </CardHeader>
       <CardContent>
         <ScrollArea className="w-full rounded-md border">
-          <div className="max-h-[600px]">
-            <Table>
+          <div className="max-h-[600px] min-w-full overflow-x-auto">
+            <Table className="min-w-[800px]">
               <TableHeader className="sticky top-0 bg-card z-10">
                 <TableRow>
                   <TableHead className="w-[80px]">Rank</TableHead>
@@ -102,6 +102,7 @@ export const ChipsUsed = ({ leagueData }: ChipsUsedProps) => {
               </TableBody>
             </Table>
           </div>
+          <ScrollBar orientation="horizontal" />
         </ScrollArea>
       </CardContent>
     </Card>
