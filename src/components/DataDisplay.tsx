@@ -1,6 +1,5 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Trophy, BarChart3, Users, TrendingUp, Zap } from "lucide-react";
 import { PerformanceChart } from "./PerformanceChart";
@@ -84,10 +83,9 @@ export const DataDisplay = ({ leagueData, gameweekChampions }: DataDisplayProps)
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <ScrollArea className="w-full rounded-md border">
-              <div className="max-h-[500px]">
-                <Table>
-                  <TableHeader className="sticky top-0 bg-card z-10">
+            <div className="w-full rounded-md border overflow-auto max-h-[500px]">
+              <Table>
+                <TableHeader className="sticky top-0 bg-card z-10 shadow-sm">
                     <TableRow>
                       <TableHead className="w-[80px]">Rank</TableHead>
                       <TableHead>Manager</TableHead>
@@ -124,8 +122,7 @@ export const DataDisplay = ({ leagueData, gameweekChampions }: DataDisplayProps)
                     ))}
                   </TableBody>
                 </Table>
-              </div>
-            </ScrollArea>
+            </div>
           </CardContent>
         </Card>
 
@@ -141,10 +138,9 @@ export const DataDisplay = ({ leagueData, gameweekChampions }: DataDisplayProps)
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <ScrollArea className="w-full rounded-md border">
-              <div className="max-h-[400px]">
-                <Table>
-                  <TableHeader className="sticky top-0 bg-card z-10">
+            <div className="w-full rounded-md border overflow-auto max-h-[400px]">
+              <Table>
+                <TableHeader className="sticky top-0 bg-card z-10 shadow-sm">
                     <TableRow>
                       <TableHead className="w-[100px]">Gameweek</TableHead>
                       <TableHead>Manager(s)</TableHead>
@@ -169,8 +165,7 @@ export const DataDisplay = ({ leagueData, gameweekChampions }: DataDisplayProps)
                     ))}
                   </TableBody>
                 </Table>
-              </div>
-            </ScrollArea>
+            </div>
           </CardContent>
         </Card>
       </TabsContent>
