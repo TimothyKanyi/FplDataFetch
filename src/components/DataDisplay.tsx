@@ -83,16 +83,16 @@ export const DataDisplay = ({ leagueData, gameweekChampions }: DataDisplayProps)
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="w-full rounded-md border overflow-auto max-h-[500px]">
+            <div className="w-full rounded-md border overflow-auto max-h-[500px] relative">
               <Table>
                 <TableHeader className="sticky top-0 bg-card z-10 shadow-sm">
                     <TableRow>
-                      <TableHead className="w-[80px]">Rank</TableHead>
-                      <TableHead>Manager</TableHead>
-                      <TableHead>Team Name</TableHead>
-                      <TableHead className="text-right">Total</TableHead>
+                      <TableHead className="sticky top-0 bg-card z-10 w-[80px]">Rank</TableHead>
+                      <TableHead className="sticky top-0 bg-card z-10">Manager</TableHead>
+                      <TableHead className="sticky top-0 bg-card z-10">Team Name</TableHead>
+                      <TableHead className="sticky top-0 bg-card z-10 text-right">Total</TableHead>
                       {gameweeks.map((gw) => (
-                        <TableHead key={gw} className="text-right whitespace-nowrap">
+                        <TableHead key={gw} className="sticky top-0 bg-card z-10 text-right whitespace-nowrap">
                           GW{gw}
                         </TableHead>
                       ))}
@@ -138,14 +138,14 @@ export const DataDisplay = ({ leagueData, gameweekChampions }: DataDisplayProps)
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="w-full rounded-md border overflow-auto max-h-[400px]">
+            <div className="w-full rounded-md border overflow-auto max-h-[400px] relative">
               <Table>
                 <TableHeader className="sticky top-0 bg-card z-10 shadow-sm">
                     <TableRow>
-                      <TableHead className="w-[100px]">Gameweek</TableHead>
-                      <TableHead>Manager(s)</TableHead>
-                      <TableHead>Team Name(s)</TableHead>
-                      <TableHead className="text-right">Points</TableHead>
+                      <TableHead className="sticky top-0 bg-card z-10 w-[100px]">Gameweek</TableHead>
+                      <TableHead className="sticky top-0 bg-card z-10">Manager(s)</TableHead>
+                      <TableHead className="sticky top-0 bg-card z-10">Team Name(s)</TableHead>
+                      <TableHead className="sticky top-0 bg-card z-10 text-right">Points</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>

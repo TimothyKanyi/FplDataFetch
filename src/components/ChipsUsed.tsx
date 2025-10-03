@@ -52,15 +52,15 @@ export const ChipsUsed = ({ leagueData }: ChipsUsedProps) => {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="w-full rounded-md border overflow-auto max-h-[600px]">
+        <div className="w-full rounded-md border overflow-auto max-h-[600px] relative">
           <Table className="min-w-[800px]">
             <TableHeader className="sticky top-0 bg-card z-10 shadow-sm">
                 <TableRow>
-                  <TableHead className="w-[80px]">Rank</TableHead>
-                  <TableHead>Manager</TableHead>
-                  <TableHead>Team Name</TableHead>
+                  <TableHead className="sticky top-0 bg-card z-10 w-[80px]">Rank</TableHead>
+                  <TableHead className="sticky top-0 bg-card z-10">Manager</TableHead>
+                  <TableHead className="sticky top-0 bg-card z-10">Team Name</TableHead>
                   {allChips.map((chip) => (
-                    <TableHead key={chip} className="text-center">
+                    <TableHead key={chip} className="sticky top-0 bg-card z-10 text-center">
                       {chipDisplayNames[chip]}
                     </TableHead>
                   ))}
