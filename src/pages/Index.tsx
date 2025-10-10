@@ -120,6 +120,16 @@ const Index = () => {
             onCancel={handleCancel}
           />
           <DataDisplay leagueData={leagueData} gameweekChampions={gameweekChampions} />
+          
+          {/* About Section */}
+          <section className="mt-12 border-t border-border pt-8">
+            <div className="max-w-2xl mx-auto text-center space-y-3">
+              <h2 className="text-xl font-semibold">About FPL Data Fetcher</h2>
+              <p className="text-muted-foreground">
+                FPL Data Fetcher lets you instantly view Fantasy Premier League standings for any mini-league. Simply enter your league ID to fetch live rankings, manager points, and more — fast, clean, and accurate.
+              </p>
+            </div>
+          </section>
         </main>
       </div>
     </ThemeProvider>

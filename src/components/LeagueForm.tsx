@@ -56,6 +56,9 @@ export const LeagueForm = ({ onFetch, onDownload, isLoading, onCancel }: LeagueF
               disabled={isLoading}
               required
             />
+            <p className="text-sm text-muted-foreground">
+              Find your FPL league ID in your league's URL — it's the number between /leagues/ and /standings (for example, in https://fantasy.premierleague.com/leagues/123456/standings, the league ID is 123456).
+            </p>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
