@@ -5,6 +5,7 @@ import { DataDisplay } from "@/components/DataDisplay";
 import { ThemeProvider } from "next-themes";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { Copy } from "lucide-react";
 
 interface Chip {
   name: string;
@@ -128,6 +129,58 @@ const Index = () => {
               <p className="text-muted-foreground">
                 FPL Data Fetcher lets you instantly view Fantasy Premier League standings for any mini-league. Simply enter your league ID to fetch live rankings, manager points, and more — fast, clean, and accurate.
               </p>
+            </div>
+          </section>
+
+          {/* Support Section */}
+          <section className="mt-8 border-t border-border pt-8">
+            <div className="max-w-2xl mx-auto text-center space-y-4">
+              <h2 className="text-lg font-semibold">Support the Project 💖</h2>
+              <p className="text-sm text-muted-foreground">
+                If you find FPL Data Fetcher helpful, you can support future improvements through crypto donations:
+              </p>
+              
+              <div className="space-y-3 mt-4">
+                {/* ETH / Base / BSC Address */}
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-2 p-3 bg-muted/50 rounded-lg">
+                  <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">
+                    ETH / Base / BSC:
+                  </span>
+                  <code className="text-xs break-all sm:break-normal px-2 py-1 bg-background rounded">
+                    0x1035063FfA2102A2f770F628Dc1062FD3413bBE8
+                  </code>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText("0x1035063FfA2102A2f770F628Dc1062FD3413bBE8");
+                      toast.success("ETH address copied to clipboard!");
+                    }}
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                    aria-label="Copy ETH address"
+                  >
+                    <Copy className="h-4 w-4" />
+                  </button>
+                </div>
+
+                {/* Solana Address */}
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-2 p-3 bg-muted/50 rounded-lg">
+                  <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">
+                    Solana:
+                  </span>
+                  <code className="text-xs break-all sm:break-normal px-2 py-1 bg-background rounded">
+                    Ab4RAnmemuSXFhaqSXJbpC5frdmkR5my7kBT2wHNFAFN
+                  </code>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText("Ab4RAnmemuSXFhaqSXJbpC5frdmkR5my7kBT2wHNFAFN");
+                      toast.success("Solana address copied to clipboard!");
+                    }}
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                    aria-label="Copy Solana address"
+                  >
+                    <Copy className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
             </div>
           </section>
         </main>
