@@ -34,7 +34,7 @@ export const LeagueForm = ({ onFetch, onDownload, isLoading, onCancel }: LeagueF
       <CardHeader>
         <CardTitle>Enter League Details</CardTitle>
         <CardDescription>
-          Enter your FPL league code and select the gameweek range to analyze
+          Enter your FPL league ID and select the gameweek range to analyze
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -46,7 +46,7 @@ export const LeagueForm = ({ onFetch, onDownload, isLoading, onCancel }: LeagueF
         </Alert>
         <form onSubmit={handleFetch} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="leagueCode">League Code</Label>
+            <Label htmlFor="leagueCode">League ID</Label>
             <Input
               id="leagueCode"
               type="text"
