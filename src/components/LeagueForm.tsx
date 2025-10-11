@@ -50,7 +50,7 @@ export const LeagueForm = ({ onFetch, onDownload, isLoading, onCancel }: LeagueF
             <Input
               id="leagueCode"
               type="text"
-              placeholder="Enter league code"
+              placeholder="Enter league ID"
               value={leagueCode}
               onChange={(e) => setLeagueCode(e.target.value)}
               disabled={isLoading}
