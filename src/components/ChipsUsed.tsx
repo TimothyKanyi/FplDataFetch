@@ -52,7 +52,7 @@ export const ChipsUsed = ({ leagueData }: ChipsUsedProps) => {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="w-full rounded-md border overflow-auto max-h-[600px] relative">
+        <div className="w-full rounded-md border overflow-x-auto overflow-y-auto max-h-[600px] relative">
           <Table className="min-w-[800px]">
             <TableHeader className="sticky top-0 bg-card z-10 shadow-sm">
                 <TableRow>

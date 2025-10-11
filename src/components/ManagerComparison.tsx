@@ -135,7 +135,8 @@ export const ManagerComparison = ({ leagueData }: ManagerComparisonProps) => {
                 <CardTitle className="text-base">Gameweek Breakdown</CardTitle>
               </CardHeader>
               <CardContent>
-                <Table>
+                <div className="w-full rounded-md border overflow-x-auto overflow-y-auto max-h-[500px] relative">
+                  <Table className="min-w-[400px]">
                   <TableHeader>
                     <TableRow>
                       <TableHead>Gameweek</TableHead>
@@ -166,6 +167,7 @@ export const ManagerComparison = ({ leagueData }: ManagerComparisonProps) => {
                     ))}
                   </TableBody>
                 </Table>
+                </div>
               </CardContent>
             </Card>
           </div>

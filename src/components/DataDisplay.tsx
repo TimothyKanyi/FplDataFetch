@@ -83,8 +83,8 @@ export const DataDisplay = ({ leagueData, gameweekChampions }: DataDisplayProps)
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="w-full rounded-md border overflow-auto max-h-[500px] relative">
-              <Table>
+            <div className="w-full rounded-md border overflow-x-auto overflow-y-auto max-h-[500px] relative">
+              <Table className="min-w-[800px]">
                 <TableHeader className="sticky top-0 bg-card z-10 shadow-sm">
                     <TableRow>
                       <TableHead className="sticky top-0 bg-card z-10 w-[80px]">Rank</TableHead>
@@ -138,8 +138,8 @@ export const DataDisplay = ({ leagueData, gameweekChampions }: DataDisplayProps)
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="w-full rounded-md border overflow-auto max-h-[400px] relative">
-              <Table>
+            <div className="w-full rounded-md border overflow-x-auto overflow-y-auto max-h-[400px] relative">
+              <Table className="min-w-[600px]">
                 <TableHeader className="sticky top-0 bg-card z-10 shadow-sm">
                     <TableRow>
                       <TableHead className="sticky top-0 bg-card z-10 w-[100px]">Gameweek</TableHead>
