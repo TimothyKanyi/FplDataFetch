@@ -1,0 +1,11 @@
+{
+  "name": "FPL Data Fetcher",
+  "description": "Instantly view Fantasy Premier League standings for any mini-league.",
+  "icon_url": "https://www.fpldatafetcher.online/og-image.png",
+  "splash_image_url": "https://www.fpldatafetcher.online/og-image.png",
+  "url": "https://www.fpldatafetcher.online/",
+  "app": {
+    "platform": "web",
+    "content_type": "website"
+  }
+}
