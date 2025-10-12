@@ -1,11 +1,33 @@
 {
-  "name": "FPL Data Fetcher",
-  "description": "Instantly view Fantasy Premier League standings for any mini-league.",
-  "icon_url": "https://www.fpldatafetcher.online/og-image.png",
-  "splash_image_url": "https://www.fpldatafetcher.online/og-image.png",
-  "url": "https://www.fpldatafetcher.online/",
-  "app": {
-    "platform": "web",
-    "content_type": "website"
+  "accountAssociation": {
+    "header": "",
+    "payload": "",
+    "signature": ""
+  },
+  "baseBuilder": {
+    "allowedAddresses": [
+      "0x1035063FfA2102A2f770F628Dc1062FD3413bBE8"
+    ]
+  },
+  "miniapp": {
+    "version": "1",
+    "name": "FPL Data Fetcher",
+    "homeUrl": "https://www.fpldatafetcher.online/",
+    "iconUrl": "https://www.fpldatafetcher.online/og-image.png",
+    "splashImageUrl": "https://www.fpldatafetcher.online/og-image.png",
+    "splashBackgroundColor": "#0A0A0A",
+    "subtitle": "Instantly view your Fantasy Premier League standings",
+    "description": "Fetch your Fantasy Premier League mini-league data instantly — view live rankings, gameweek scores, and manager stats.",
+    "screenshotUrls": [
+      "https://www.fpldatafetcher.online/og-image.png"
+    ],
+    "primaryCategory": "sports",
+    "tags": ["fantasy", "football", "FPL", "data", "analytics"],
+    "heroImageUrl": "https://www.fpldatafetcher.online/og-image.png",
+    "tagline": "Your FPL data, fetched instantly",
+    "ogTitle": "FPL Data Fetcher — View Fantasy Premier League Standings Instantly",
+    "ogDescription": "Instantly view Fantasy Premier League standings for any mini-league. Fetch live rankings, manager points, and gameweek data.",
+    "ogImageUrl": "https://www.fpldatafetcher.online/og-image.png",
+    "noindex": false
   }
 }
