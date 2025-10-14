@@ -125,7 +125,7 @@ const Index = () => {
           {/* About Section */}
           <section className="mt-12 border-t border-border pt-8">
             <div className="max-w-2xl mx-auto text-center space-y-3">
-              <h2 className="text-xl font-semibold">About FPL Data Fetcher</h2>
+              <h2 className="font-heading text-xl font-semibold">About FPL Data Fetcher</h2>
               <p className="text-muted-foreground">
                 FPL Data Fetcher lets you instantly view Fantasy Premier League standings for any mini-league. Simply enter your league ID to fetch live rankings, manager points, and more — fast, clean, and accurate.
               </p>
@@ -135,7 +135,7 @@ const Index = () => {
           {/* Support Section */}
           <section className="mt-8 border-t border-border pt-8">
             <div className="max-w-2xl mx-auto text-center space-y-4">
-              <h2 className="text-lg font-semibold">Support the Project 💖</h2>
+              <h2 className="font-heading text-lg font-semibold">Support the Project 💖</h2>
               <p className="text-sm text-muted-foreground">
                 If you find FPL Data Fetcher helpful, you can support future improvements through crypto donations:
               </p>
