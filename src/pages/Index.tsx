@@ -13,6 +13,14 @@ interface Chip {
   event: number;
 }
 
+interface CaptainPick {
+  gameweek: number;
+  captain: string;
+  captain_points: number;
+  vice_captain: string;
+  vice_captain_points: number;
+}
+
 interface Manager {
   rank: number;
   entry: number;
@@ -21,6 +29,7 @@ interface Manager {
   total: number;
   gameweek_points: { [key: string]: number };
   chips: Chip[];
+  captains: CaptainPick[];
 }
 
 interface GameweekChampion {
