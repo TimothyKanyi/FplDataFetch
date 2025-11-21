@@ -11,12 +11,11 @@ interface Chip {
   event: number;
 }
 
-interface CaptainPick {
+interface TransferData {
   gameweek: number;
-  captain: string;
-  captain_points: number;
-  vice_captain: string;
-  vice_captain_points: number;
+  transfers_made: number;
+  transfer_cost: number;
+  points: number;
 }
 
 interface Manager {
@@ -27,7 +26,7 @@ interface Manager {
   total: number;
   gameweek_points: { [key: string]: number };
   chips: Chip[];
-  captains: CaptainPick[];
+  transfers: TransferData[];
 }
 
 interface GameweekChampion {
@@ -134,20 +133,16 @@ serve(async (req) => {
       ])
     );
 
-    // Fetch gameweek history and captain picks for each manager
+    // Fetch gameweek history and transfer data for each manager
     const managersWithHistory: Manager[] = [];
     
     for (const manager of allManagers) {
       try {
         const history = await fetchEntryHistory(manager.entry);
         const gameweekPoints: { [key: string]: number } = {};
-        const captainPicks: CaptainPick[] = [];
+        const transferData: TransferData[] = [];
         
         // Build gameweek points map
-        const gameweekPointsMap = new Map(
-          history.current.map((event: any) => [event.event, event.points])
-        );
-        
         for (const event of history.current) {
           const gw = event.event;
           if (gw >= startGW && gw <= endGW) {
@@ -155,31 +150,17 @@ serve(async (req) => {
           }
         }
         
-        // Fetch captain picks for each gameweek
+        // Fetch transfer data for each gameweek
         for (let gw = startGW; gw <= endGW; gw++) {
           try {
             const picks = await fetchGameweekPicks(manager.entry, gw);
-            if (picks && picks.picks) {
-              const captainPick = picks.picks.find((p: any) => p.is_captain);
-              const viceCaptainPick = picks.picks.find((p: any) => p.is_vice_captain);
-              
-              if (captainPick && viceCaptainPick) {
-                // Get player names from bootstrap data
-                const captainName = String(playersMap.get(captainPick.element) || 'Unknown');
-                const viceCaptainName = String(playersMap.get(viceCaptainPick.element) || 'Unknown');
-                
-                // Get element history for this gameweek to find points
-                const captainPoints = picks.entry_history?.points || 0;
-                const viceCaptainPoints = picks.entry_history?.points || 0;
-                
-                captainPicks.push({
-                  gameweek: gw,
-                  captain: captainName,
-                  captain_points: Math.floor(captainPoints / captainPick.multiplier), // Base points
-                  vice_captain: viceCaptainName,
-                  vice_captain_points: viceCaptainPoints,
-                });
-              }
+            if (picks && picks.entry_history) {
+              transferData.push({
+                gameweek: gw,
+                transfers_made: picks.entry_history.event_transfers || 0,
+                transfer_cost: picks.entry_history.event_transfers_cost || 0,
+                points: picks.entry_history.points || 0,
+              });
             }
           } catch (error) {
             console.error(`Error fetching picks for entry ${manager.entry} GW${gw}:`, error);
@@ -198,7 +179,7 @@ serve(async (req) => {
           total: manager.total,
           gameweek_points: gameweekPoints,
           chips: chipsInRange,
-          captains: captainPicks,
+          transfers: transferData,
         });
       } catch (error) {
         console.error(`Error fetching history for entry ${manager.entry}:`, error);
