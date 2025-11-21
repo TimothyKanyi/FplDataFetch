@@ -1,8 +1,8 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Trophy, Shield, Users, TrendingUp, Zap } from "lucide-react";
-import { CaptainsPicks } from "./CaptainsPicks";
+import { Trophy, ArrowLeftRight, Users, TrendingUp, Zap } from "lucide-react";
+import { TransfersData } from "./TransfersData";
 import { ManagerComparison } from "./ManagerComparison";
 import { Statistics } from "./Statistics";
 import { ChipsUsed } from "./ChipsUsed";
@@ -13,12 +13,11 @@ interface Chip {
   event: number;
 }
 
-interface CaptainPick {
+interface TransferData {
   gameweek: number;
-  captain: string;
-  captain_points: number;
-  vice_captain: string;
-  vice_captain_points: number;
+  transfers_made: number;
+  transfer_cost: number;
+  points: number;
 }
 
 interface Manager {
@@ -29,7 +28,7 @@ interface Manager {
   total: number;
   gameweek_points: { [key: string]: number };
   chips: Chip[];
-  captains: CaptainPick[];
+  transfers: TransferData[];
 }
 
 interface GameweekChampion {
@@ -64,9 +63,9 @@ export const DataDisplay = ({ leagueData, gameweekChampions }: DataDisplayProps)
           <Trophy className="h-4 w-4" />
           <span className="hidden sm:inline">Standings</span>
         </TabsTrigger>
-        <TabsTrigger value="captains" className="flex items-center gap-2">
-          <Shield className="h-4 w-4" />
-          <span className="hidden sm:inline">Captains</span>
+        <TabsTrigger value="transfers" className="flex items-center gap-2">
+          <ArrowLeftRight className="h-4 w-4" />
+          <span className="hidden sm:inline">Transfers</span>
         </TabsTrigger>
         <TabsTrigger value="compare" className="flex items-center gap-2">
           <Users className="h-4 w-4" />
@@ -179,8 +178,8 @@ export const DataDisplay = ({ leagueData, gameweekChampions }: DataDisplayProps)
         </Card>
       </TabsContent>
 
-      <TabsContent value="captains">
-        <CaptainsPicks leagueData={leagueData} />
+      <TabsContent value="transfers">
+        <TransfersData leagueData={leagueData} />
       </TabsContent>
 
       <TabsContent value="compare">

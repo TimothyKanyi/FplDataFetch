@@ -13,12 +13,11 @@ interface Chip {
   event: number;
 }
 
-interface CaptainPick {
+interface TransferData {
   gameweek: number;
-  captain: string;
-  captain_points: number;
-  vice_captain: string;
-  vice_captain_points: number;
+  transfers_made: number;
+  transfer_cost: number;
+  points: number;
 }
 
 interface Manager {
@@ -29,7 +28,7 @@ interface Manager {
   total: number;
   gameweek_points: { [key: string]: number };
   chips: Chip[];
-  captains: CaptainPick[];
+  transfers: TransferData[];
 }
 
 interface GameweekChampion {
