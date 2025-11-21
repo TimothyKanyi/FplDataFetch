@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Header } from "@/components/Header";
 import { LeagueForm } from "@/components/LeagueForm";
 import { DataDisplay } from "@/components/DataDisplay";
+import { LoadingSkeleton } from "@/components/LoadingSkeleton";
 import { ThemeProvider } from "next-themes";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -45,13 +46,41 @@ const Index = () => {
   const [gameweekChampions, setGameweekChampions] = useState<GameweekChampion[] | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [abortController, setAbortController] = useState<AbortController | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
-  const handleFetch = async (leagueCode: string, startGW: number, endGW: number) => {
+  // Load cached data on mount
+  const loadCachedData = (leagueCode: string, startGW: number, endGW: number) => {
+    const cacheKey = `fpl_${leagueCode}_${startGW}_${endGW}`;
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) {
+      try {
+        const { data, timestamp } = JSON.parse(cached);
+        const age = Date.now() - timestamp;
+        // Use cache if less than 5 minutes old
+        if (age < 5 * 60 * 1000) {
+          setLeagueData(data.leagueData);
+          setGameweekChampions(data.gameweekChampions);
+          return true;
+        }
+      } catch (e) {
+        console.error('Cache parse error:', e);
+      }
+    }
+    return false;
+  };
+
+  const handleFetch = async (leagueCode: string, startGW: number, endGW: number, useCache = true) => {
     const controller = new AbortController();
     setAbortController(controller);
     setIsLoading(true);
-    setLeagueData(null);
-    setGameweekChampions(null);
+    
+    // Try to load from cache first
+    if (useCache && loadCachedData(leagueCode, startGW, endGW)) {
+      toast.info("Loaded cached data, refreshing in background...");
+    } else {
+      setLeagueData(null);
+      setGameweekChampions(null);
+    }
 
     try {
       const { data, error } = await supabase.functions.invoke("fetch-league-data", {
@@ -63,12 +92,36 @@ const Index = () => {
       if (data) {
         setLeagueData(data.leagueData);
         setGameweekChampions(data.gameweekChampions);
+        
+        // Cache the successful response
+        const cacheKey = `fpl_${leagueCode}_${startGW}_${endGW}`;
+        localStorage.setItem(cacheKey, JSON.stringify({
+          data,
+          timestamp: Date.now()
+        }));
+        
         toast.success("Data fetched successfully!");
+        setRetryCount(0);
       }
     } catch (error: any) {
       if (error.name !== "AbortError") {
         console.error("Error fetching data:", error);
-        toast.error("Failed to fetch data. Please check the league code and try again.");
+        
+        // If we have retry attempts left, suggest retry
+        if (retryCount < 2) {
+          toast.error("Failed to fetch data. Click 'Retry' to try again.", {
+            action: {
+              label: "Retry",
+              onClick: () => {
+                setRetryCount(prev => prev + 1);
+                handleFetch(leagueCode, startGW, endGW, false);
+              }
+            }
+          });
+        } else {
+          toast.error("Failed to fetch data after multiple attempts. Please try again later.");
+          setRetryCount(0);
+        }
       }
     } finally {
       setIsLoading(false);
@@ -128,7 +181,11 @@ const Index = () => {
             isLoading={isLoading}
             onCancel={handleCancel}
           />
-          <DataDisplay leagueData={leagueData} gameweekChampions={gameweekChampions} />
+          {isLoading && !leagueData ? (
+            <LoadingSkeleton />
+          ) : (
+            <DataDisplay leagueData={leagueData} gameweekChampions={gameweekChampions} />
+          )}
           
           {/* About Section */}
           <section className="mt-12 border-t border-border pt-8">
