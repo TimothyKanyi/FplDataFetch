@@ -10,10 +10,11 @@ interface LeagueFormProps {
   onFetch: (leagueCode: string, startGW: number, endGW: number) => Promise<void>;
   onDownload: (leagueCode: string, startGW: number, endGW: number) => Promise<void>;
   isLoading: boolean;
+  isRefreshing?: boolean;
   onCancel: () => void;
 }
 
-export const LeagueForm = ({ onFetch, onDownload, isLoading, onCancel }: LeagueFormProps) => {
+export const LeagueForm = ({ onFetch, onDownload, isLoading, isRefreshing = false, onCancel }: LeagueFormProps) => {
   const [leagueCode, setLeagueCode] = useState("");
   const [startGW, setStartGW] = useState(1);
   const [endGW, setEndGW] = useState(38);
@@ -108,6 +109,13 @@ export const LeagueForm = ({ onFetch, onDownload, isLoading, onCancel }: LeagueF
                 </>
               )}
             </Button>
+            
+            {isRefreshing && !isLoading && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Updating...
+              </div>
+            )}
 
             <Button
               type="button"
