@@ -5,6 +5,68 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Simple in-memory cache with TTL
+const cache = new Map<string, { data: any; expires: number }>();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+function getCached<T>(key: string): T | null {
+  const cached = cache.get(key);
+  if (cached && cached.expires > Date.now()) {
+    return cached.data as T;
+  }
+  cache.delete(key);
+  return null;
+}
+
+function setCache(key: string, data: any): void {
+  cache.set(key, { data, expires: Date.now() + CACHE_TTL });
+}
+
+// Retry with exponential backoff
+async function fetchWithRetry<T>(
+  url: string,
+  maxRetries = 3,
+  timeout = 10000
+): Promise<T> {
+  const cacheKey = `fetch:${url}`;
+  const cached = getCached<T>(cacheKey);
+  if (cached) return cached;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeout);
+      
+      const response = await fetch(url, { signal: controller.signal });
+      clearTimeout(timeoutId);
+      
+      if (!response.ok) {
+        if (response.status === 429 || response.status === 503) {
+          // Rate limited or service unavailable - wait and retry
+          if (attempt < maxRetries) {
+            const delay = Math.min(1000 * Math.pow(2, attempt), 8000);
+            await new Promise(resolve => setTimeout(resolve, delay));
+            continue;
+          }
+        }
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      setCache(cacheKey, data);
+      return data;
+    } catch (error: any) {
+      if (attempt === maxRetries) {
+        throw new Error(`Failed after ${maxRetries + 1} attempts: ${error.message}`);
+      }
+      // Exponential backoff
+      const delay = Math.min(1000 * Math.pow(2, attempt), 8000);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+  throw new Error('Fetch failed');
+}
+
 interface Chip {
   name: string;
   time: string;
@@ -38,52 +100,32 @@ interface GameweekChampion {
   }[];
 }
 
-async function fetchLeagueStandings(leagueCode: string, page: number = 1) {
-  const response = await fetch(
+async function fetchLeagueStandings(leagueCode: string, page: number = 1): Promise<any> {
+  return fetchWithRetry(
     `https://fantasy.premierleague.com/api/leagues-classic/${leagueCode}/standings/?page_standings=${page}`
   );
-  
-  if (!response.ok) {
-    throw new Error(`Failed to fetch league data: ${response.statusText}`);
-  }
-  
-  return await response.json();
 }
 
-async function fetchEntryHistory(entryId: number) {
-  const response = await fetch(
+async function fetchEntryHistory(entryId: number): Promise<any> {
+  return fetchWithRetry(
     `https://fantasy.premierleague.com/api/entry/${entryId}/history/`
   );
-  
-  if (!response.ok) {
-    throw new Error(`Failed to fetch entry history for ${entryId}`);
-  }
-  
-  return await response.json();
 }
 
-async function fetchGameweekPicks(entryId: number, gameweek: number) {
-  const response = await fetch(
-    `https://fantasy.premierleague.com/api/entry/${entryId}/event/${gameweek}/picks/`
-  );
-  
-  if (!response.ok) {
+async function fetchGameweekPicks(entryId: number, gameweek: number): Promise<any> {
+  try {
+    return await fetchWithRetry(
+      `https://fantasy.premierleague.com/api/entry/${entryId}/event/${gameweek}/picks/`
+    );
+  } catch {
     return null; // Return null if picks not available
   }
-  
-  return await response.json();
 }
 
-async function fetchBootstrapStatic() {
-  const response = await fetch(
+async function fetchBootstrapStatic(): Promise<any> {
+  return fetchWithRetry(
     `https://fantasy.premierleague.com/api/bootstrap-static/`
   );
-  
-  if (!response.ok) {
-    throw new Error(`Failed to fetch bootstrap static data`);
-  }
-  
-  return await response.json();
 }
 
 serve(async (req) => {
@@ -133,57 +175,76 @@ serve(async (req) => {
       ])
     );
 
-    // Fetch gameweek history and transfer data for each manager
+    // Fetch gameweek history and transfer data for all managers in parallel
     const managersWithHistory: Manager[] = [];
     
-    for (const manager of allManagers) {
-      try {
-        const history = await fetchEntryHistory(manager.entry);
-        const gameweekPoints: { [key: string]: number } = {};
-        const transferData: TransferData[] = [];
-        
-        // Build gameweek points map
-        for (const event of history.current) {
-          const gw = event.event;
-          if (gw >= startGW && gw <= endGW) {
-            gameweekPoints[gw] = event.points;
+    // Process managers in parallel batches of 10 to avoid overwhelming the API
+    const BATCH_SIZE = 10;
+    for (let i = 0; i < allManagers.length; i += BATCH_SIZE) {
+      const batch = allManagers.slice(i, i + BATCH_SIZE);
+      
+      const results = await Promise.allSettled(
+        batch.map(async (manager) => {
+          const history = await fetchEntryHistory(manager.entry);
+          const gameweekPoints: { [key: string]: number } = {};
+          
+          // Build gameweek points map
+          for (const event of history.current) {
+            const gw = event.event;
+            if (gw >= startGW && gw <= endGW) {
+              gameweekPoints[gw] = event.points;
+            }
           }
-        }
-        
-        // Fetch transfer data for each gameweek
-        for (let gw = startGW; gw <= endGW; gw++) {
-          try {
-            const picks = await fetchGameweekPicks(manager.entry, gw);
-            if (picks && picks.entry_history) {
+          
+          // Fetch transfer data for all gameweeks in parallel
+          const gameweeks = Array.from(
+            { length: endGW - startGW + 1 },
+            (_, i) => startGW + i
+          );
+          
+          const picksResults = await Promise.allSettled(
+            gameweeks.map(gw => fetchGameweekPicks(manager.entry, gw))
+          );
+          
+          const transferData: TransferData[] = [];
+          picksResults.forEach((result, index) => {
+            if (result.status === 'fulfilled' && result.value?.entry_history) {
               transferData.push({
-                gameweek: gw,
-                transfers_made: picks.entry_history.event_transfers || 0,
-                transfer_cost: picks.entry_history.event_transfers_cost || 0,
-                points: picks.entry_history.points || 0,
+                gameweek: gameweeks[index],
+                transfers_made: result.value.entry_history.event_transfers || 0,
+                transfer_cost: result.value.entry_history.event_transfers_cost || 0,
+                points: result.value.entry_history.points || 0,
               });
             }
-          } catch (error) {
-            console.error(`Error fetching picks for entry ${manager.entry} GW${gw}:`, error);
-          }
+          });
+          
+          // Filter chips within the gameweek range
+          const chipsInRange = (history.chips || [])
+            .filter((chip: Chip) => chip.event >= startGW && chip.event <= endGW);
+          
+          return {
+            rank: manager.rank,
+            entry: manager.entry,
+            entry_name: manager.entry_name,
+            player_name: manager.player_name,
+            total: manager.total,
+            gameweek_points: gameweekPoints,
+            chips: chipsInRange,
+            transfers: transferData,
+          };
+        })
+      );
+      
+      // Add successful results
+      results.forEach((result) => {
+        if (result.status === 'fulfilled') {
+          managersWithHistory.push(result.value);
+        } else {
+          console.error('Manager fetch failed:', result.reason);
         }
-        
-        // Filter chips within the gameweek range
-        const chipsInRange = (history.chips || [])
-          .filter((chip: Chip) => chip.event >= startGW && chip.event <= endGW);
-        
-        managersWithHistory.push({
-          rank: manager.rank,
-          entry: manager.entry,
-          entry_name: manager.entry_name,
-          player_name: manager.player_name,
-          total: manager.total,
-          gameweek_points: gameweekPoints,
-          chips: chipsInRange,
-          transfers: transferData,
-        });
-      } catch (error) {
-        console.error(`Error fetching history for entry ${manager.entry}:`, error);
-      }
+      });
+      
+      console.log(`Processed ${Math.min(i + BATCH_SIZE, allManagers.length)} of ${allManagers.length} managers`);
     }
 
     // Calculate gameweek champions
