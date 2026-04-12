@@ -1,130 +1,103 @@
+import { useMemo, memo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Award, TrendingUp, Target } from "lucide-react";
-
-interface Chip {
-  name: string;
-  time: string;
-  event: number;
-}
-
-interface Manager {
-  rank: number;
-  entry: number;
-  entry_name: string;
-  player_name: string;
-  total: number;
-  gameweek_points: { [key: string]: number };
-  chips: Chip[];
-}
-
-interface GameweekChampion {
-  gameweek: number;
-  champions: {
-    player_name: string;
-    entry_name: string;
-    points: number;
-  }[];
-}
+import type { Manager, GameweekChampion } from "@/hooks/useFplData";
+import {
+  useChampionStats,
+  useManagerConsistency,
+  useAvgPointsPerGW,
+  useGameweeks,
+} from "@/hooks/useFplComputed";
 
 interface StatisticsProps {
   leagueData: Manager[];
   gameweekChampions: GameweekChampion[];
 }
 
-export const Statistics = ({ leagueData, gameweekChampions }: StatisticsProps) => {
-  const gameweeks = leagueData[0]?.gameweek_points 
-    ? Object.keys(leagueData[0].gameweek_points).sort((a, b) => Number(a) - Number(b))
-    : [];
+// Memoized chart configuration to prevent recreation
+const chartTooltipStyle = {
+  backgroundColor: "hsl(var(--card))",
+  border: "1px solid hsl(var(--border))",
+  borderRadius: "8px",
+};
 
-  // Calculate champion frequency
-  const championCounts: { [key: string]: number } = {};
-  gameweekChampions.forEach((gw) => {
-    gw.champions.forEach((champion) => {
-      championCounts[champion.player_name] = (championCounts[champion.player_name] || 0) + 1;
-    });
-  });
+// Memoized stat cards to prevent unnecessary re-renders
+const StatCard = memo(
+  ({
+    title,
+    icon: Icon,
+    value,
+    subtext,
+    accent = false,
+  }: {
+    title: string;
+    icon: React.ElementType;
+    value: string | number;
+    subtext: string;
+    accent?: boolean;
+  }) => (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-sm font-medium flex items-center gap-2">
+          <Icon className="h-4 w-4" />
+          {title}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className={`text-2xl font-bold ${accent ? "text-accent" : ""}`}>
+          {value}
+        </div>
+        <p className="text-xs text-muted-foreground mt-1">{subtext}</p>
+      </CardContent>
+    </Card>
+  )
+);
 
-  const topChampions = Object.entries(championCounts)
-    .sort(([, a], [, b]) => b - a)
-    .slice(0, 5)
-    .map(([name, count]) => ({ name, wins: count }));
+export const Statistics = memo(({ leagueData, gameweekChampions }: StatisticsProps) => {
+  // Use memoized gameweeks - only recalculates when leagueData changes
+  const gameweeks = useGameweeks(leagueData);
 
-  // Calculate consistency (standard deviation)
-  const managersWithConsistency = leagueData.map((manager) => {
-    const points = Object.values(manager.gameweek_points);
-    const avg = points.reduce((a, b) => a + b, 0) / points.length;
-    const variance = points.reduce((sum, p) => sum + Math.pow(p - avg, 2), 0) / points.length;
-    const stdDev = Math.sqrt(variance);
-    return {
-      ...manager,
-      average: avg.toFixed(1),
-      consistency: (100 - stdDev).toFixed(1), // Lower stdDev = higher consistency
-    };
-  }).sort((a, b) => Number(b.consistency) - Number(a.consistency));
+  // Use custom hooks for expensive computations
+  const topChampions = useChampionStats(gameweekChampions);
+  const managersWithConsistency = useManagerConsistency(leagueData);
+  const avgPointsPerGW = useAvgPointsPerGW(leagueData, gameweeks);
 
-  // Average points per gameweek across all managers
-  const avgPointsPerGW = gameweeks.map((gw) => {
-    const total = leagueData.reduce((sum, m) => sum + (m.gameweek_points[gw] || 0), 0);
-    return {
-      gameweek: `GW${gw}`,
-      average: (total / leagueData.length).toFixed(1),
-    };
-  });
+  // Memoized summary stats
+  const leagueAverage = useMemo(() => {
+    return leagueData.length
+      ? (leagueData.reduce((sum, m) => sum + m.total, 0) / leagueData.length).toFixed(0)
+      : "0";
+  }, [leagueData]);
+
+  const highestSingleGW = useMemo(() => {
+    if (!gameweekChampions.length) return 0;
+    return Math.max(...gameweekChampions.map((gw) => gw.champions[0].points));
+  }, [gameweekChampions]);
 
   return (
     <div className="space-y-6">
+      {/* Memoized stat cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <Target className="h-4 w-4" />
-              League Average
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {(leagueData.reduce((sum, m) => sum + m.total, 0) / leagueData.length).toFixed(0)}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Total points across all managers
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <TrendingUp className="h-4 w-4" />
-              Highest Single GW
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-accent">
-              {Math.max(...gameweekChampions.map(gw => gw.champions[0].points))}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Best individual gameweek score
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <Award className="h-4 w-4" />
-              Total Managers
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {leagueData.length}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Competing in this league
-            </p>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="League Average"
+          icon={Target}
+          value={leagueAverage}
+          subtext="Total points across all managers"
+        />
+        <StatCard
+          title="Highest Single GW"
+          icon={TrendingUp}
+          value={highestSingleGW}
+          subtext="Best individual gameweek score"
+          accent
+        />
+        <StatCard
+          title="Total Managers"
+          icon={Award}
+          value={leagueData.length}
+          subtext="Competing in this league"
+        />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -145,13 +118,7 @@ export const Statistics = ({ leagueData, gameweekChampions }: StatisticsProps) =
                   height={100}
                 />
                 <YAxis className="text-muted-foreground" />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: "hsl(var(--card))", 
-                    border: "1px solid hsl(var(--border))",
-                    borderRadius: "8px"
-                  }}
-                />
+                <Tooltip contentStyle={chartTooltipStyle} />
                 <Bar dataKey="wins" fill="hsl(var(--primary))" radius={[8, 8, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
@@ -198,13 +165,7 @@ export const Statistics = ({ leagueData, gameweekChampions }: StatisticsProps) =
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
               <XAxis dataKey="gameweek" className="text-muted-foreground" />
               <YAxis className="text-muted-foreground" />
-              <Tooltip 
-                contentStyle={{ 
-                  backgroundColor: "hsl(var(--card))", 
-                  border: "1px solid hsl(var(--border))",
-                  borderRadius: "8px"
-                }}
-              />
+              <Tooltip contentStyle={chartTooltipStyle} />
               <Bar dataKey="average" fill="hsl(var(--accent))" radius={[8, 8, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
@@ -212,4 +173,4 @@ export const Statistics = ({ leagueData, gameweekChampions }: StatisticsProps) =
       </Card>
     </div>
   );
-};
+});

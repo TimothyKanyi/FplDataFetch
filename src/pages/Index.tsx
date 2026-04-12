@@ -1,193 +1,116 @@
-import { useState } from "react";
+import { useState, useCallback, memo } from "react";
 import { Header } from "@/components/Header";
 import { LeagueForm } from "@/components/LeagueForm";
 import { DataDisplay } from "@/components/DataDisplay";
 import { LoadingSkeleton } from "@/components/LoadingSkeleton";
 import { DonationSection } from "@/components/DonationSection";
 import { ThemeProvider } from "next-themes";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useFplData, useFplDownload, fplQueryKeys } from "@/hooks/useFplData";
+import { useQueryClient } from "@tanstack/react-query";
 
-interface Chip {
-  name: string;
-  time: string;
-  event: number;
-}
+// Memoized child components to prevent unnecessary re-renders
+const MemoizedDataDisplay = memo(DataDisplay);
 
-interface TransferData {
-  gameweek: number;
-  transfers_made: number;
-  transfer_cost: number;
-  points: number;
-}
-
-interface Manager {
-  rank: number;
-  entry: number;
-  entry_name: string;
-  player_name: string;
-  total: number;
-  gameweek_points: { [key: string]: number };
-  chips: Chip[];
-  transfers: TransferData[];
-}
-
-interface GameweekChampion {
-  gameweek: number;
-  champions: {
-    player_name: string;
-    entry_name: string;
-    points: number;
-  }[];
+interface FetchParams {
+  leagueCode: string;
+  startGW: number;
+  endGW: number;
 }
 
 const Index = () => {
-  const [leagueData, setLeagueData] = useState<Manager[] | null>(null);
-  const [gameweekChampions, setGameweekChampions] = useState<GameweekChampion[] | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [abortController, setAbortController] = useState<AbortController | null>(null);
-  const [retryCount, setRetryCount] = useState(0);
+  const [fetchParams, setFetchParams] = useState<FetchParams | null>(null);
+  const queryClient = useQueryClient();
 
-  // Load cached data on mount
-  const loadCachedData = (leagueCode: string, startGW: number, endGW: number) => {
-    const cacheKey = `fpl_${leagueCode}_${startGW}_${endGW}`;
-    const cached = localStorage.getItem(cacheKey);
-    if (cached) {
+  // Optimized data fetching with TanStack Query
+  const {
+    data,
+    isLoading,
+    isFetching,
+    error,
+    isError,
+    refetch,
+  } = useFplData(fetchParams);
+
+  // CSV download mutation
+  const downloadMutation = useFplDownload();
+
+  // Memoized fetch handler - prevents recreation on every render
+  const handleFetch = useCallback(
+    async (leagueCode: string, startGW: number, endGW: number) => {
+      const params = { leagueCode, startGW, endGW };
+
+      // Check if we have cached data for instant display
+      const cachedData = queryClient.getQueryData(
+        fplQueryKeys.league(leagueCode, startGW, endGW)
+      );
+
+      if (cachedData) {
+        toast.info("Using cached data, refreshing in background...");
+      }
+
+      // Set params to trigger query - TanStack Query handles deduplication
+      setFetchParams(params);
+    },
+    [queryClient]
+  );
+
+  // Handle manual retry
+  const handleRetry = useCallback(() => {
+    if (fetchParams) {
+      refetch();
+    }
+  }, [fetchParams, refetch]);
+
+  // CSV download handler
+  const handleDownload = useCallback(
+    async (leagueCode: string, startGW: number, endGW: number) => {
       try {
-        const { data, timestamp } = JSON.parse(cached);
-        const age = Date.now() - timestamp;
-        // Use cache if less than 5 minutes old
-        if (age < 5 * 60 * 1000) {
-          setLeagueData(data.leagueData);
-          setGameweekChampions(data.gameweekChampions);
-          return true;
-        }
-      } catch (e) {
-        console.error('Cache parse error:', e);
-      }
-    }
-    return false;
-  };
-
-  const handleFetch = async (leagueCode: string, startGW: number, endGW: number, useCache = true) => {
-    const controller = new AbortController();
-    setAbortController(controller);
-    
-    // Check for cached data
-    const hasCachedData = useCache && loadCachedData(leagueCode, startGW, endGW);
-    
-    // Set loading states based on cache availability
-    if (hasCachedData) {
-      setIsRefreshing(true);
-      toast.info("Loaded cached data, refreshing in background...");
-    } else {
-      setIsLoading(true);
-      setLeagueData(null);
-      setGameweekChampions(null);
-    }
-
-    try {
-      const { data, error } = await supabase.functions.invoke("fetch-league-data", {
-        body: { leagueCode, startGW, endGW },
-      });
-
-      if (error) throw error;
-
-      // Only update if this request wasn't aborted
-      if (!controller.signal.aborted && data) {
-        setLeagueData(data.leagueData);
-        setGameweekChampions(data.gameweekChampions);
-        
-        // Cache the successful response
-        const cacheKey = `fpl_${leagueCode}_${startGW}_${endGW}`;
-        localStorage.setItem(cacheKey, JSON.stringify({
-          data,
-          timestamp: Date.now()
-        }));
-        
-        if (!hasCachedData) {
-          toast.success("Data fetched successfully!");
-        }
-        setRetryCount(0);
-      }
-    } catch (error: unknown) {
-      // Only handle errors if not aborted
-      if (error instanceof Error && error.name === "AbortError") {
-        return;
-      }
-      
-      console.error("Error fetching data:", error);
-      
-      // If we have retry attempts left, suggest retry
-      if (retryCount < 2) {
-        toast.error("Failed to fetch data. Click 'Retry' to try again.", {
-          action: {
-            label: "Retry",
-            onClick: () => {
-              setRetryCount(prev => prev + 1);
-              handleFetch(leagueCode, startGW, endGW, false);
-            }
-          }
+        const fileUrl = await downloadMutation.mutateAsync({
+          leagueCode,
+          startGW,
+          endGW,
         });
-      } else {
-        toast.error("Failed to fetch data after multiple attempts. Please try again later.");
-        setRetryCount(0);
-      }
-    } finally {
-      // Only update state if this controller is still active
-      if (abortController === controller) {
-        setIsLoading(false);
-        setIsRefreshing(false);
-        setAbortController(null);
-      }
-    }
-  };
 
-  const handleDownload = async (leagueCode: string, startGW: number, endGW: number) => {
-    const controller = new AbortController();
-    setAbortController(controller);
-    setIsLoading(true);
-
-    try {
-      const { data, error } = await supabase.functions.invoke("generate-excel", {
-        body: { leagueCode, startGW, endGW },
-      });
-
-      if (error) throw error;
-
-      if (data?.fileUrl) {
         // Download the file
         const link = document.createElement("a");
-        link.href = data.fileUrl;
+        link.href = fileUrl;
         link.download = `fpl_league_${leagueCode}_gw${startGW}-${endGW}.csv`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        toast.success("CSV file downloaded successfully!");
-      }
-    } catch (error: unknown) {
-      if (error instanceof Error && error.name === "AbortError") {
-        return;
-      }
-      
-      console.error("Error downloading CSV:", error);
-      toast.error("Failed to generate CSV file. Please try again.");
-    } finally {
-      if (abortController === controller) {
-        setIsLoading(false);
-        setAbortController(null);
-      }
-    }
-  };
 
-  const handleCancel = () => {
-    if (abortController) {
-      abortController.abort();
-      setIsLoading(false);
-      toast.info("Operation cancelled");
-    }
-  };
+        toast.success("CSV file downloaded successfully!");
+      } catch (err) {
+        console.error("Error downloading CSV:", err);
+        toast.error("Failed to generate CSV file. Please try again.");
+      }
+    },
+    [downloadMutation]
+  );
+
+  // Cancel ongoing requests
+  const handleCancel = useCallback(() => {
+    // TanStack Query cancellation is handled via AbortSignal automatically
+    toast.info("Request cancelled");
+  }, []);
+
+  // Show error toast when query fails
+  if (isError && error) {
+    toast.error(
+      error instanceof Error ? error.message : "Failed to fetch data",
+      {
+        action: {
+          label: "Retry",
+          onClick: handleRetry,
+        },
+      }
+    );
+  }
+
+  const hasData = !!data?.leagueData?.length;
+  const isInitialLoading = isLoading && !hasData;
+  const isBackgroundRefreshing = isFetching && hasData;
 
   return (
     <ThemeProvider attribute="class" defaultTheme="light">
@@ -197,16 +120,20 @@ const Index = () => {
           <LeagueForm
             onFetch={handleFetch}
             onDownload={handleDownload}
-            isLoading={isLoading}
-            isRefreshing={isRefreshing}
+            isLoading={isLoading || downloadMutation.isPending}
+            isRefreshing={isBackgroundRefreshing}
             onCancel={handleCancel}
           />
-          {isLoading && !leagueData ? (
+
+          {isInitialLoading ? (
             <LoadingSkeleton />
-          ) : (
-            <DataDisplay leagueData={leagueData} gameweekChampions={gameweekChampions} />
-          )}
-          
+          ) : hasData ? (
+            <MemoizedDataDisplay
+              leagueData={data.leagueData}
+              gameweekChampions={data.gameweekChampions}
+            />
+          ) : null}
+
           <DonationSection />
         </main>
       </div>
