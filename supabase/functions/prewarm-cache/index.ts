@@ -53,13 +53,19 @@ serve(async (req) => {
         // Fetch bootstrap
         const bootstrap = await fetchWithRetry<any>('https://fantasy.premierleague.com/api/bootstrap-static/');
         const currentGameweek = bootstrap.current_event || bootstrap.current_event_id || 0;
+        const currentEvent = (bootstrap?.events || []).find((e: any) => e.is_current === true) || null;
+        const isLive = currentEvent ? !currentEvent.finished : false;
 
         // Fetch standings pages
         let allManagers: any[] = [];
+        let leagueName = "";
         let page = 1;
         let hasNext = true;
         while (hasNext) {
           const s = await fetchWithRetry<any>(`https://fantasy.premierleague.com/api/leagues-classic/${leagueCode}/standings/?page_standings=${page}`);
+          if (!leagueName && s?.league?.name) {
+            leagueName = s.league.name;
+          }
           allManagers = allManagers.concat(s.standings.results);
           hasNext = s.standings.has_next;
           page++;
@@ -91,7 +97,7 @@ serve(async (req) => {
               }
             });
             const chips = (history.chips || []).filter((c:any)=>c.event>=startGW && c.event<=endGW);
-            return { rank: mgr.rank, entry: mgr.entry, entry_name: mgr.entry_name, player_name: mgr.player_name, total: mgr.total, gameweek_points: gameweekPoints, chips, transfers };
+            return { rank: mgr.rank, entry: mgr.entry, entry_name: mgr.entry_name, player_name: mgr.player_name, total: mgr.total, gameweek_points: gameweekPoints, chips, transfers, last_rank: mgr.last_rank ?? null };
           }));
 
           results.forEach(r => { if (r.status === 'fulfilled') managersWithHistory.push((r as any).value); });
@@ -108,16 +114,20 @@ serve(async (req) => {
           if (champs.length) gameweekChampions.push({ gameweek: gw, champions: champs });
         }
 
-        const payload = { leagueData: managersWithHistory, gameweekChampions, currentGameweek };
+        const payload = { leagueData: managersWithHistory, gameweekChampions, currentGameweek, leagueName, isLive };
 
         // Upsert cache
         await supabase.from('league_cache').upsert({ league_id: String(leagueCode), start_gw: startGW, end_gw: endGW, payload, fetched_at: new Date().toISOString(), last_queried_at: new Date().toISOString() }, { onConflict: ['league_id','start_gw','end_gw'] });
 
-        // Write history snapshot if not present
-        if (currentGameweek && Number.isInteger(currentGameweek)) {
-          const { data: existing } = await supabase.from('league_history').select('id').eq('league_id', String(leagueCode)).eq('gameweek', currentGameweek).limit(1).maybeSingle();
+        // Write history snapshot once per COMPLETED gameweek (never the live one)
+        const finishedEvents = (bootstrap?.events || []).filter((e: any) => e.finished === true);
+        const lastCompletedGameweek = finishedEvents.length
+          ? Math.max(...finishedEvents.map((e: any) => e.id))
+          : 0;
+        if (lastCompletedGameweek && Number.isInteger(lastCompletedGameweek)) {
+          const { data: existing } = await supabase.from('league_history').select('id').eq('league_id', String(leagueCode)).eq('gameweek', lastCompletedGameweek).limit(1).maybeSingle();
           if (!existing) {
-            await supabase.from('league_history').insert({ league_id: String(leagueCode), gameweek: currentGameweek, standings_snapshot: payload, created_at: new Date().toISOString() });
+            await supabase.from('league_history').insert({ league_id: String(leagueCode), gameweek: lastCompletedGameweek, standings_snapshot: payload, created_at: new Date().toISOString() });
           }
         }
 

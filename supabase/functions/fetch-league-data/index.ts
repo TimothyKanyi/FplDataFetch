@@ -65,6 +65,7 @@ interface Manager {
   gameweek_points: { [key: string]: number };
   chips: Chip[];
   transfers: TransferData[];
+  last_rank?: number | null;
 }
 
 interface GameweekChampion {
@@ -163,11 +164,15 @@ serve(async (req) => {
     // If missing or stale, fetch fresh data from FPL API (existing logic)
     // Fetch all pages of league standings
     let allManagers: any[] = [];
+    let leagueName = "";
     let page = 1;
     let hasNextPage = true;
 
     while (hasNextPage) {
       const standings = await fetchLeagueStandings(String(leagueCode), page);
+      if (!leagueName && standings?.league?.name) {
+        leagueName = standings.league.name;
+      }
       allManagers = allManagers.concat(standings.standings.results);
       hasNextPage = standings.standings.has_next;
       page++;
@@ -250,6 +255,7 @@ serve(async (req) => {
             gameweek_points: gameweekPoints,
             chips: chipsInRange,
             transfers: transferData,
+            last_rank: manager.last_rank ?? null,
           };
         })
       );
@@ -302,6 +308,8 @@ serve(async (req) => {
       leagueData: managersWithHistory,
       gameweekChampions,
       currentGameweek,
+      leagueName,
+      isLive,
     };
 
     // Upsert into Supabase cache table
@@ -319,7 +327,13 @@ serve(async (req) => {
 
     // Optionally insert a league_history snapshot for completed gameweeks
     try {
-      const gameweekToSnapshot = payload.currentGameweek;
+      // Only snapshot gameweeks that have actually finished (not the live one).
+      const finishedEvents = (bootstrapData?.events || []).filter(
+        (e: any) => e.finished === true
+      );
+      const gameweekToSnapshot = finishedEvents.length
+        ? Math.max(...finishedEvents.map((e: any) => e.id))
+        : 0;
       if (gameweekToSnapshot && Number.isInteger(gameweekToSnapshot)) {
         // Check if history already exists
         const { data: existingHistory, error: historySelectError } = await supabase
