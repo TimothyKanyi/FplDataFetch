@@ -310,6 +310,7 @@ serve(async (req) => {
       currentGameweek,
       leagueName,
       isLive,
+      fetchedAt: new Date().toISOString(),
     };
 
     // Upsert into Supabase cache table

@@ -7,6 +7,7 @@ import { DonationSection } from "@/components/DonationSection";
 import { ShareCard } from "@/components/ShareCard";
 import { LeagueHistory } from "@/components/LeagueHistory";
 import { AdBanner } from "@/components/AdBanner";
+import { Button } from "@/components/ui/button";
 import { ThemeProvider } from "next-themes";
 import { toast } from "sonner";
 import { useFplData, useFplDownload, fplQueryKeys } from "@/hooks/useFplData";
@@ -15,19 +16,45 @@ import { useQueryClient } from "@tanstack/react-query";
 // Memoized child components to prevent unnecessary re-renders
 const MemoizedDataDisplay = memo(DataDisplay);
 
+const LAST_LEAGUE_KEY = "fpl_last_league";
+
 interface FetchParams {
   leagueCode: string;
   startGW: number;
   endGW: number;
 }
 
+const loadSavedLeague = (): FetchParams | null => {
+  try {
+    const raw = localStorage.getItem(LAST_LEAGUE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed.leagueCode === "string" && parsed.leagueCode.trim()) {
+      return {
+        leagueCode: parsed.leagueCode,
+        startGW: Number(parsed.startGW) || 1,
+        endGW: Number(parsed.endGW) || 38,
+      };
+    }
+  } catch {
+    // Ignore corrupt/inaccessible storage.
+  }
+  return null;
+};
+
 const Index = () => {
-  const [fetchParams, setFetchParams] = useState<FetchParams | null>(null);
+  const [fetchParams, setFetchParams] = useState<FetchParams | null>(
+    () => loadSavedLeague()
+  );
+  const [isRestored, setIsRestored] = useState<boolean>(
+    () => loadSavedLeague() !== null
+  );
   const queryClient = useQueryClient();
 
   // Optimized data fetching with TanStack Query
   const {
     data,
+    dataUpdatedAt,
     isLoading,
     isFetching,
     error,
@@ -43,6 +70,14 @@ const Index = () => {
     async (leagueCode: string, startGW: number, endGW: number) => {
       const params = { leagueCode, startGW, endGW };
 
+      // Persist so we can auto-restore on the next visit.
+      try {
+        localStorage.setItem(LAST_LEAGUE_KEY, JSON.stringify(params));
+      } catch {
+        // Storage unavailable — non-fatal.
+      }
+      setIsRestored(false);
+
       // Check if we have cached data for instant display
       const cachedData = queryClient.getQueryData(
         fplQueryKeys.league(leagueCode, startGW, endGW)
@@ -57,6 +92,17 @@ const Index = () => {
     },
     [queryClient]
   );
+
+  // Clear the saved league and return to the empty search state.
+  const handleClearSaved = useCallback(() => {
+    try {
+      localStorage.removeItem(LAST_LEAGUE_KEY);
+    } catch {
+      // Storage unavailable — non-fatal.
+    }
+    setIsRestored(false);
+    setFetchParams(null);
+  }, []);
 
   // Handle manual retry
   const handleRetry = useCallback(() => {
@@ -115,11 +161,37 @@ const Index = () => {
   const isInitialLoading = isLoading && !hasData;
   const isBackgroundRefreshing = isFetching && hasData;
 
+  // Prefer the server-side fetchedAt; fall back to the client refetch time so
+  // the "Updated" label also works for older cached payloads.
+  const fetchedAt =
+    data?.fetchedAt ??
+    (dataUpdatedAt ? new Date(dataUpdatedAt).toISOString() : undefined);
+
   return (
     <ThemeProvider attribute="class" defaultTheme="light">
       <div className="min-h-screen bg-background">
         <Header />
         <main className="container mx-auto px-4 py-8 space-y-8">
+          {isRestored && fetchParams && (
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-muted/40 px-4 py-3 text-sm">
+              <span className="text-muted-foreground">
+                Continue where you left off — League{" "}
+                <span className="font-semibold text-foreground">
+                  {fetchParams.leagueCode}
+                </span>{" "}
+                · GW {fetchParams.startGW}–{fetchParams.endGW}
+              </span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={handleClearSaved}
+              >
+                Not your league? Search again
+              </Button>
+            </div>
+          )}
+
           <LeagueForm
             onFetch={handleFetch}
             onDownload={handleDownload}
@@ -136,6 +208,8 @@ const Index = () => {
                 leagueData={data.leagueData}
                 gameweekChampions={data.gameweekChampions}
                 currentGameweek={data.currentGameweek}
+                isLive={data.isLive}
+                fetchedAt={fetchedAt}
               />
               {/* Ad slot — below the standings table, not sticky. */}
               <AdBanner slot="xxxx" />

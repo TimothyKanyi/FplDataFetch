@@ -23,7 +23,28 @@ interface DataDisplayProps {
   leagueData: Manager[] | null;
   gameweekChampions: GameweekChampion[] | null;
   currentGameweek?: number;
+  isLive?: boolean;
+  fetchedAt?: string;
 }
+
+/**
+ * Compact rank-movement indicator: ▲ green if moved up, ▼ red if moved down,
+ * and a neutral dash if unchanged or `last_rank` is unavailable.
+ */
+const RankMovement = memo(({ manager }: { manager: Manager }) => {
+  const last = manager.last_rank;
+  if (last == null) {
+    return <span className="text-muted-foreground">—</span>;
+  }
+  const delta = last - manager.rank;
+  if (delta > 0) {
+    return <span className="font-semibold text-emerald-600">▲{delta}</span>;
+  }
+  if (delta < 0) {
+    return <span className="font-semibold text-red-600">▼{Math.abs(delta)}</span>;
+  }
+  return <span className="text-muted-foreground">—</span>;
+});
 
 // Chip abbreviations + badge colors for the standings "Chips" column.
 const CHIP_ABBREVIATIONS: Record<string, string> = {
@@ -102,6 +123,9 @@ const ManagerTableRow = memo(
   }) => (
     <TableRow>
       <TableCell className="font-medium">{manager.rank}</TableCell>
+      <TableCell className="w-[64px] text-center">
+        <RankMovement manager={manager} />
+      </TableCell>
       <TableCell>{manager.player_name}</TableCell>
       <TableCell>{manager.entry_name}</TableCell>
       <TableCell className="text-right font-bold">{manager.total}</TableCell>
@@ -126,6 +150,7 @@ const ManagerTableRow = memo(
 
 // Column width constants shared by the header and virtualized rows so they stay aligned.
 const RANK_W = 80;
+const MOVEMENT_W = 56;
 const TOTAL_W = 80;
 const CHIPS_W = 120;
 const GW_W = 64;
@@ -161,6 +186,9 @@ const VirtualizedManagerTable = memo(
           >
             <div style={{ width: RANK_W }} className="shrink-0 px-4 py-2 font-medium">
               {manager.rank}
+            </div>
+            <div style={{ width: MOVEMENT_W }} className="shrink-0 px-1 py-2 text-center">
+              <RankMovement manager={manager} />
             </div>
             <div className="flex-1 min-w-[140px] px-4 py-2 truncate">
               {manager.player_name}
@@ -202,6 +230,9 @@ const VirtualizedManagerTable = memo(
           <div style={{ width: RANK_W }} className="shrink-0 px-4 py-3">
             Rank
           </div>
+          <div style={{ width: MOVEMENT_W }} className="shrink-0 px-1 py-3 text-center">
+            ±
+          </div>
           <div className="flex-1 min-w-[140px] px-4 py-3">Manager</div>
           <div className="flex-1 min-w-[140px] px-4 py-3">Team Name</div>
           <div style={{ width: TOTAL_W }} className="shrink-0 px-4 py-3 text-right">
@@ -237,7 +268,7 @@ const VirtualizedManagerTable = memo(
   }
 );
 
-export const DataDisplay = memo(({ leagueData, gameweekChampions, currentGameweek }: DataDisplayProps) => {
+export const DataDisplay = memo(({ leagueData, gameweekChampions, currentGameweek, isLive, fetchedAt }: DataDisplayProps) => {
   // Hooks must be called before any early return
   const gameweeks = useGameweeks(leagueData);
   const isHighestPoints = useIsHighestPoints(leagueData);
@@ -256,10 +287,34 @@ export const DataDisplay = memo(({ leagueData, gameweekChampions, currentGamewee
               {/* League Standings */}
               <Card>
                 <CardHeader>
-                  <CardTitle>League Standings</CardTitle>
-                  <CardDescription>
-                    Overall rankings with gameweek-by-gameweek points
-                  </CardDescription>
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div>
+                      <CardTitle>League Standings</CardTitle>
+                      <CardDescription>
+                        Overall rankings with gameweek-by-gameweek points
+                      </CardDescription>
+                    </div>
+                    {fetchedAt && (
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        {isLive && (
+                          <span className="inline-flex items-center gap-1.5 rounded-full bg-red-500/10 px-2 py-0.5 font-medium text-red-600">
+                            <span className="relative flex h-2 w-2">
+                              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-75" />
+                              <span className="relative inline-flex h-2 w-2 rounded-full bg-red-500" />
+                            </span>
+                            LIVE
+                          </span>
+                        )}
+                        <span>
+                          Updated{" "}
+                          {new Date(fetchedAt).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 </CardHeader>
                 <CardContent>
                   {leagueData.length > 50 ? (
@@ -277,6 +332,7 @@ export const DataDisplay = memo(({ leagueData, gameweekChampions, currentGamewee
                         <TableHeader className="sticky top-0 bg-card z-10 shadow-sm">
                           <TableRow>
                             <TableHead className="sticky top-0 bg-card z-10 w-[80px]">Rank</TableHead>
+                            <TableHead className="sticky top-0 bg-card z-10 w-[64px] text-center">±</TableHead>
                             <TableHead className="sticky top-0 bg-card z-10">Manager</TableHead>
                             <TableHead className="sticky top-0 bg-card z-10">Team Name</TableHead>
                             <TableHead className="sticky top-0 bg-card z-10 text-right">Total</TableHead>

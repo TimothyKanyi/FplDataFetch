@@ -43,6 +43,7 @@ export interface FplDataResponse {
   currentGameweek: number;
   leagueName?: string;
   isLive?: boolean;
+  fetchedAt?: string;
 }
 
 export interface FetchParams {

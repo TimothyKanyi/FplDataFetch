@@ -114,7 +114,7 @@ serve(async (req) => {
           if (champs.length) gameweekChampions.push({ gameweek: gw, champions: champs });
         }
 
-        const payload = { leagueData: managersWithHistory, gameweekChampions, currentGameweek, leagueName, isLive };
+        const payload = { leagueData: managersWithHistory, gameweekChampions, currentGameweek, leagueName, isLive, fetchedAt: new Date().toISOString() };
 
         // Upsert cache
         await supabase.from('league_cache').upsert({ league_id: String(leagueCode), start_gw: startGW, end_gw: endGW, payload, fetched_at: new Date().toISOString(), last_queried_at: new Date().toISOString() }, { onConflict: ['league_id','start_gw','end_gw'] });
