@@ -44,6 +44,7 @@ export interface FplDataResponse {
   leagueName?: string;
   isLive?: boolean;
   fetchedAt?: string;
+  deadlineTime?: string;
 }
 
 export interface FetchParams {

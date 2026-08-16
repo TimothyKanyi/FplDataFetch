@@ -24,6 +24,10 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || Deno.env.get("SUPABASE_KEY") || "";
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
+// Reserved demo league ID. The prewarm cron explicitly skips this ID so the
+// seeded demo payload is never overwritten with real/empty FPL data.
+const DEMO_LEAGUE_CODE = "demo-league-001";
+
 serve(async (req) => {
   // Allow cron or manual trigger
   try {
@@ -45,6 +49,10 @@ serve(async (req) => {
 
     // For each league, fetch fresh data and upsert
     for (const l of leagues) {
+      if (l.league_id === DEMO_LEAGUE_CODE) {
+        console.log(`Skipping demo league ${DEMO_LEAGUE_CODE}`);
+        continue;
+      }
       try {
         const leagueCode = l.league_id;
         const startGW = l.start_gw || 1;
@@ -55,6 +63,7 @@ serve(async (req) => {
         const currentGameweek = bootstrap.current_event || bootstrap.current_event_id || 0;
         const currentEvent = (bootstrap?.events || []).find((e: any) => e.is_current === true) || null;
         const isLive = currentEvent ? !currentEvent.finished : false;
+        const deadlineTime = currentEvent?.deadline_time ?? null;
 
         // Fetch standings pages
         let allManagers: any[] = [];
@@ -114,7 +123,7 @@ serve(async (req) => {
           if (champs.length) gameweekChampions.push({ gameweek: gw, champions: champs });
         }
 
-        const payload = { leagueData: managersWithHistory, gameweekChampions, currentGameweek, leagueName, isLive, fetchedAt: new Date().toISOString() };
+        const payload = { leagueData: managersWithHistory, gameweekChampions, currentGameweek, leagueName, isLive, deadlineTime, fetchedAt: new Date().toISOString() };
 
         // Upsert cache
         await supabase.from('league_cache').upsert({ league_id: String(leagueCode), start_gw: startGW, end_gw: endGW, payload, fetched_at: new Date().toISOString(), last_queried_at: new Date().toISOString() }, { onConflict: ['league_id','start_gw','end_gw'] });

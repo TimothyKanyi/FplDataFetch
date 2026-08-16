@@ -1,4 +1,5 @@
-import { useState, useCallback, memo } from "react";
+import { useCallback, useMemo, memo } from "react";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { LeagueForm } from "@/components/LeagueForm";
 import { DataDisplay } from "@/components/DataDisplay";
@@ -17,6 +18,11 @@ import { useQueryClient } from "@tanstack/react-query";
 const MemoizedDataDisplay = memo(DataDisplay);
 
 const LAST_LEAGUE_KEY = "fpl_last_league";
+
+// Reserved demo league ID. Never matches a real FPL league (FPL IDs are
+// numeric). The prewarm-cache cron skips this ID, and it must never be used by
+// real-data cleanup, so the seeded demo payload is never overwritten.
+const DEMO_LEAGUE_CODE = "demo-league-001";
 
 interface FetchParams {
   leagueCode: string;
@@ -42,14 +48,29 @@ const loadSavedLeague = (): FetchParams | null => {
   return null;
 };
 
+const parseGwRange = (raw: string | null): { startGW: number; endGW: number } => {
+  const [s, e] = (raw || "1-38").split("-").map((n) => parseInt(n, 10));
+  return { startGW: s || 1, endGW: e || 38 };
+};
+
 const Index = () => {
-  const [fetchParams, setFetchParams] = useState<FetchParams | null>(
-    () => loadSavedLeague()
-  );
-  const [isRestored, setIsRestored] = useState<boolean>(
-    () => loadSavedLeague() !== null
-  );
+  const { leagueId } = useParams();
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
+
+  // URL takes precedence over the saved league (shareable/bookmarkable).
+  const gwParam = searchParams.get("gw");
+  const fetchParams = useMemo<FetchParams | null>(() => {
+    if (leagueId) {
+      const { startGW, endGW } = parseGwRange(gwParam);
+      return { leagueCode: leagueId, startGW, endGW };
+    }
+    return loadSavedLeague();
+  }, [leagueId, gwParam]);
+
+  const isRestored = !leagueId && !!fetchParams; // restored from localStorage
+  const isDemo = fetchParams?.leagueCode === DEMO_LEAGUE_CODE;
 
   // Optimized data fetching with TanStack Query
   const {
@@ -68,15 +89,15 @@ const Index = () => {
   // Memoized fetch handler - prevents recreation on every render
   const handleFetch = useCallback(
     async (leagueCode: string, startGW: number, endGW: number) => {
-      const params = { leagueCode, startGW, endGW };
-
       // Persist so we can auto-restore on the next visit.
       try {
-        localStorage.setItem(LAST_LEAGUE_KEY, JSON.stringify(params));
+        localStorage.setItem(
+          LAST_LEAGUE_KEY,
+          JSON.stringify({ leagueCode, startGW, endGW })
+        );
       } catch {
         // Storage unavailable — non-fatal.
       }
-      setIsRestored(false);
 
       // Check if we have cached data for instant display
       const cachedData = queryClient.getQueryData(
@@ -87,10 +108,10 @@ const Index = () => {
         toast.info("Using cached data, refreshing in background...");
       }
 
-      // Set params to trigger query - TanStack Query handles deduplication
-      setFetchParams(params);
+      // Reflect state in the URL (shareable/bookmarkable) without a reload.
+      navigate(`/league/${encodeURIComponent(leagueCode)}?gw=${startGW}-${endGW}`);
     },
-    [queryClient]
+    [navigate, queryClient]
   );
 
   // Clear the saved league and return to the empty search state.
@@ -100,9 +121,8 @@ const Index = () => {
     } catch {
       // Storage unavailable — non-fatal.
     }
-    setIsRestored(false);
-    setFetchParams(null);
-  }, []);
+    navigate("/");
+  }, [navigate]);
 
   // Handle manual retry
   const handleRetry = useCallback(() => {
@@ -192,6 +212,17 @@ const Index = () => {
             </div>
           )}
 
+          {isDemo && (
+            <div className="flex items-center gap-2 rounded-lg border border-blue-500/30 bg-blue-500/10 px-4 py-3 text-sm">
+              <span className="rounded bg-blue-500 px-1.5 py-0.5 text-xs font-semibold text-white">
+                DEMO
+              </span>
+              <span className="text-muted-foreground">
+                You're viewing a sample league — enter your own league ID for real data.
+              </span>
+            </div>
+          )}
+
           <LeagueForm
             onFetch={handleFetch}
             onDownload={handleDownload}
@@ -210,6 +241,7 @@ const Index = () => {
                 currentGameweek={data.currentGameweek}
                 isLive={data.isLive}
                 fetchedAt={fetchedAt}
+                deadlineTime={data.deadlineTime}
               />
               {/* Ad slot — below the standings table, not sticky. */}
               <AdBanner slot="xxxx" />
@@ -221,7 +253,20 @@ const Index = () => {
               />
               <LeagueHistory leagueCode={fetchParams?.leagueCode ?? ""} />
             </>
-          ) : null}
+          ) : (
+            <div className="flex flex-col items-start gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => handleFetch(DEMO_LEAGUE_CODE, 1, 38)}
+              >
+                Try a demo league
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                No league ID handy? See what the tool looks like with sample data.
+              </p>
+            </div>
+          )}
 
           <DonationSection />
         </main>

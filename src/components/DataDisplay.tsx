@@ -1,4 +1,4 @@
-import { memo, lazy, Suspense, useCallback, useState } from "react";
+import { memo, lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { List } from "react-window";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -25,6 +25,7 @@ interface DataDisplayProps {
   currentGameweek?: number;
   isLive?: boolean;
   fetchedAt?: string;
+  deadlineTime?: string;
 }
 
 /**
@@ -44,6 +45,96 @@ const RankMovement = memo(({ manager }: { manager: Manager }) => {
     return <span className="font-semibold text-red-600">▼{Math.abs(delta)}</span>;
   }
   return <span className="text-muted-foreground">—</span>;
+});
+
+// Countdown to the current gameweek deadline (client-side interval).
+const DeadlineCountdown = memo(
+  ({ deadlineTime, currentGameweek }: { deadlineTime?: string; currentGameweek?: number }) => {
+    const [now, setNow] = useState(() => Date.now());
+
+    useEffect(() => {
+      const id = setInterval(() => setNow(Date.now()), 1000);
+      return () => clearInterval(id);
+    }, []);
+
+    if (!deadlineTime) return null;
+    const deadline = new Date(deadlineTime).getTime();
+    if (!Number.isFinite(deadline)) return null;
+
+    const remaining = deadline - now;
+    if (remaining <= 0) return null;
+
+    const mins = Math.floor(remaining / 60000);
+    const days = Math.floor(mins / 1440);
+    const hours = Math.floor((mins % 1440) / 60);
+    const minutes = mins % 60;
+    const label =
+      days > 0 ? `${days}d ${hours}h` : hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+
+    return (
+      <span className="text-xs text-muted-foreground">
+        GW{currentGameweek} deadline in {label}
+      </span>
+    );
+  }
+);
+
+// Compact "Top Movers" summary computed from last_rank.
+const TopMovers = memo(({ leagueData }: { leagueData: Manager[] }) => {
+  type Ranked = Manager & { last_rank: number };
+  const { risers, fallers } = useMemo(() => {
+    const withLast = leagueData.filter((m): m is Ranked => m.last_rank != null);
+    const risers = withLast
+      .filter((m) => m.last_rank > m.rank)
+      .sort((a, b) => b.last_rank - b.rank - (a.last_rank - a.rank))
+      .slice(0, 3);
+    const fallers = withLast
+      .filter((m) => m.last_rank < m.rank)
+      .sort((a, b) => b.rank - b.last_rank - (a.rank - a.last_rank))
+      .slice(0, 3);
+    return { risers, fallers };
+  }, [leagueData]);
+
+  if (!risers.length && !fallers.length) return null;
+
+  return (
+    <Card>
+      <CardContent className="py-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="space-y-1">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Top risers
+            </p>
+            {risers.length ? (
+              risers.map((m) => (
+                <div key={m.entry} className="flex items-center justify-between gap-2 text-sm">
+                  <span className="truncate">{m.player_name}</span>
+                  <span className="font-semibold text-emerald-600">▲{m.last_rank - m.rank}</span>
+                </div>
+              ))
+            ) : (
+              <p className="text-xs text-muted-foreground">No risers yet</p>
+            )}
+          </div>
+          <div className="space-y-1">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Top fallers
+            </p>
+            {fallers.length ? (
+              fallers.map((m) => (
+                <div key={m.entry} className="flex items-center justify-between gap-2 text-sm">
+                  <span className="truncate">{m.player_name}</span>
+                  <span className="font-semibold text-red-600">▼{m.rank - m.last_rank}</span>
+                </div>
+              ))
+            ) : (
+              <p className="text-xs text-muted-foreground">No fallers yet</p>
+            )}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
 });
 
 // Chip abbreviations + badge colors for the standings "Chips" column.
@@ -316,7 +407,7 @@ const VirtualizedManagerTable = memo(
   }
 );
 
-export const DataDisplay = memo(({ leagueData, gameweekChampions, currentGameweek, isLive, fetchedAt }: DataDisplayProps) => {
+export const DataDisplay = memo(({ leagueData, gameweekChampions, currentGameweek, isLive, fetchedAt, deadlineTime }: DataDisplayProps) => {
   // Hooks must be called before any early return
   const gameweeks = useGameweeks(leagueData);
   const isHighestPoints = useIsHighestPoints(leagueData);
@@ -332,6 +423,8 @@ export const DataDisplay = memo(({ leagueData, gameweekChampions, currentGamewee
           standings: (
             <ErrorBoundary name="standings">
               <>
+              <TopMovers leagueData={leagueData} />
+
               {/* League Standings */}
               <Card>
                 <CardHeader>
@@ -342,8 +435,12 @@ export const DataDisplay = memo(({ leagueData, gameweekChampions, currentGamewee
                         Overall rankings with gameweek-by-gameweek points
                       </CardDescription>
                     </div>
-                    {fetchedAt && (
+                    {(fetchedAt || deadlineTime || isLive) && (
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <DeadlineCountdown
+                          deadlineTime={deadlineTime}
+                          currentGameweek={currentGameweek}
+                        />
                         {isLive && (
                           <span className="inline-flex items-center gap-1.5 rounded-full bg-red-500/10 px-2 py-0.5 font-medium text-red-600">
                             <span className="relative flex h-2 w-2">
@@ -353,13 +450,15 @@ export const DataDisplay = memo(({ leagueData, gameweekChampions, currentGamewee
                             LIVE
                           </span>
                         )}
-                        <span>
-                          Updated{" "}
-                          {new Date(fetchedAt).toLocaleTimeString([], {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </span>
+                        {fetchedAt && (
+                          <span>
+                            Updated{" "}
+                            {new Date(fetchedAt).toLocaleTimeString([], {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </span>
+                        )}
                       </div>
                     )}
                   </div>

@@ -132,6 +132,7 @@ serve(async (req) => {
     const bootstrapData = await fetchBootstrapStatic();
     const currentEvent = (bootstrapData?.events || []).find((e: any) => e.is_current === true) || null;
     const isLive = currentEvent ? !currentEvent.finished : false;
+    const deadlineTime = currentEvent?.deadline_time ?? null;
     const TTL_SECONDS = isLive ? 60 : 15 * 60;
 
     // Try to read cache from Supabase
@@ -310,6 +311,7 @@ serve(async (req) => {
       currentGameweek,
       leagueName,
       isLive,
+      deadlineTime,
       fetchedAt: new Date().toISOString(),
     };
 
