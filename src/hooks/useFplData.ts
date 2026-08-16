@@ -25,6 +25,7 @@ export interface Manager {
   gameweek_points: { [key: string]: number };
   chips: Chip[];
   transfers: TransferData[];
+  last_rank?: number | null;
 }
 
 export interface GameweekChampion {
@@ -40,6 +41,8 @@ export interface FplDataResponse {
   leagueData: Manager[];
   gameweekChampions: GameweekChampion[];
   currentGameweek: number;
+  leagueName?: string;
+  isLive?: boolean;
 }
 
 export interface FetchParams {
@@ -55,20 +58,46 @@ export const fplQueryKeys = {
     [...fplQueryKeys.all, code, start, end] as const,
 };
 
+// The league data endpoint is called over GET so that the service worker can
+// apply stale-while-revalidate caching (Workbox only caches GET requests).
+const FETCH_LEAGUE_URL = `${
+  import.meta.env.VITE_SUPABASE_URL
+}/functions/v1/fetch-league-data`;
+const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
 // Fetch function with AbortController support
 const fetchFplData = async (
   params: FetchParams,
   signal?: AbortSignal
 ): Promise<FplDataResponse> => {
-  const { data, error } = await supabase.functions.invoke("fetch-league-data", {
-    body: params,
+  const url = new URL(FETCH_LEAGUE_URL);
+  url.searchParams.set("leagueCode", params.leagueCode);
+  url.searchParams.set("startGW", String(params.startGW));
+  url.searchParams.set("endGW", String(params.endGW));
+
+  const response = await fetch(url.toString(), {
+    method: "GET",
     signal,
+    headers: {
+      apikey: SUPABASE_PUBLISHABLE_KEY,
+      Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
+    },
   });
 
-  if (error) throw error;
-  if (!data) throw new Error("No data received");
+  if (!response.ok) {
+    let message = `Request failed (${response.status})`;
+    try {
+      const body = await response.json();
+      if (body?.error) message = body.error;
+    } catch {
+      // Non-JSON error body; keep the status message
+    }
+    throw new Error(message);
+  }
 
-  return data as FplDataResponse;
+  const data = (await response.json()) as FplDataResponse;
+  if (!data?.leagueData) throw new Error("No data received");
+  return data;
 };
 
 // CSV download function

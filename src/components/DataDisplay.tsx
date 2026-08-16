@@ -1,14 +1,19 @@
-import { memo } from "react";
+import { memo, lazy, Suspense, useCallback } from "react";
+import { List } from "react-window";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Trophy } from "lucide-react";
 import { TransfersData } from "./TransfersData";
 import { ManagerComparison } from "./ManagerComparison";
-import { Statistics } from "./Statistics";
 import { ChipsUsed } from "./ChipsUsed";
 import { AnimatedTabs } from "./AnimatedTabs";
+import { EnhancedSkeleton } from "./EnhancedSkeleton";
 import type { Manager, GameweekChampion } from "@/hooks/useFplData";
 import { useGameweeks, useIsHighestPoints } from "@/hooks/useFplComputed";
+
+// Lazy-load the Statistics tab so recharts (a heavy dependency) is split out of
+// the initial/shared bundle and only fetched when the user opens the Stats tab.
+const Statistics = lazy(() => import("./Statistics"));
 
 interface DataDisplayProps {
   leagueData: Manager[] | null;
@@ -48,6 +53,110 @@ const ManagerTableRow = memo(
   )
 );
 
+// Column width constants shared by the header and virtualized rows so they stay aligned.
+const RANK_W = 80;
+const TOTAL_W = 80;
+const GW_W = 64;
+const ROW_HEIGHT = 40;
+const LIST_MAX_HEIGHT = 440;
+
+/**
+ * Virtualized standings body for large leagues (> 50 managers).
+ * Renders only visible rows via react-window; the header stays fixed above it.
+ */
+const VirtualizedManagerTable = memo(
+  ({
+    leagueData,
+    gameweeks,
+    isHighestPoints,
+  }: {
+    leagueData: Manager[];
+    gameweeks: string[];
+    isHighestPoints: (gw: string, points: number) => boolean;
+  }) => {
+    const headerClasses =
+      "bg-card text-muted-foreground text-sm font-medium border-b border-border";
+
+    const Row = useCallback(
+      ({ index, style }: { index: number; style: React.CSSProperties }) => {
+        const manager = leagueData[index];
+        return (
+          <div
+            style={style}
+            className="flex items-center border-b border-border/60 text-sm hover:bg-muted/30"
+          >
+            <div style={{ width: RANK_W }} className="shrink-0 px-4 py-2 font-medium">
+              {manager.rank}
+            </div>
+            <div className="flex-1 min-w-[140px] px-4 py-2 truncate">
+              {manager.player_name}
+            </div>
+            <div className="flex-1 min-w-[140px] px-4 py-2 text-muted-foreground truncate">
+              {manager.entry_name}
+            </div>
+            <div style={{ width: TOTAL_W }} className="shrink-0 px-4 py-2 text-right font-bold">
+              {manager.total}
+            </div>
+            {gameweeks.map((gw) => {
+              const points = manager.gameweek_points[gw] || 0;
+              const isHighest = isHighestPoints(gw, points);
+              return (
+                <div
+                  key={gw}
+                  style={{ width: GW_W }}
+                  className={`shrink-0 px-2 py-2 text-right ${
+                    isHighest ? "font-bold text-accent bg-accent/10" : ""
+                  }`}
+                >
+                  {points}
+                </div>
+              );
+            })}
+          </div>
+        );
+      },
+      [leagueData, gameweeks, isHighestPoints]
+    );
+
+    return (
+      <div className="min-w-[900px]">
+        {/* Virtualized header row (always visible above the scrolling body) */}
+        <div className={`flex items-center ${headerClasses}`}>
+          <div style={{ width: RANK_W }} className="shrink-0 px-4 py-3">
+            Rank
+          </div>
+          <div className="flex-1 min-w-[140px] px-4 py-3">Manager</div>
+          <div className="flex-1 min-w-[140px] px-4 py-3">Team Name</div>
+          <div style={{ width: TOTAL_W }} className="shrink-0 px-4 py-3 text-right">
+            Total
+          </div>
+          {gameweeks.map((gw) => (
+            <div
+              key={gw}
+              style={{ width: GW_W }}
+              className="shrink-0 px-2 py-3 text-right whitespace-nowrap"
+            >
+              GW{gw}
+            </div>
+          ))}
+        </div>
+
+        <List
+          rowComponent={Row}
+          rowCount={leagueData.length}
+          rowHeight={ROW_HEIGHT}
+          rowProps={{}}
+          rowKey={(index) => leagueData[index]?.entry ?? index}
+          style={{
+            height: Math.min(leagueData.length * ROW_HEIGHT, LIST_MAX_HEIGHT),
+            width: "100%",
+          }}
+        />
+      </div>
+    );
+  }
+);
+
 export const DataDisplay = memo(({ leagueData, gameweekChampions, currentGameweek }: DataDisplayProps) => {
   // Hooks must be called before any early return
   const gameweeks = useGameweeks(leagueData);
@@ -72,33 +181,43 @@ export const DataDisplay = memo(({ leagueData, gameweekChampions, currentGamewee
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="w-full rounded-md border overflow-x-auto overflow-y-auto max-h-[500px] relative">
-                    <Table className="min-w-[800px]">
-                      <TableHeader className="sticky top-0 bg-card z-10 shadow-sm">
-                        <TableRow>
-                          <TableHead className="sticky top-0 bg-card z-10 w-[80px]">Rank</TableHead>
-                          <TableHead className="sticky top-0 bg-card z-10">Manager</TableHead>
-                          <TableHead className="sticky top-0 bg-card z-10">Team Name</TableHead>
-                          <TableHead className="sticky top-0 bg-card z-10 text-right">Total</TableHead>
-                          {gameweeks.map((gw) => (
-                            <TableHead key={gw} className="sticky top-0 bg-card z-10 text-right whitespace-nowrap">
-                              GW{gw}
-                            </TableHead>
+                  {leagueData.length > 50 ? (
+                    <div className="w-full rounded-md border overflow-x-auto relative">
+                      <VirtualizedManagerTable
+                        leagueData={leagueData}
+                        gameweeks={gameweeks}
+                        isHighestPoints={isHighestPoints}
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-full rounded-md border overflow-x-auto overflow-y-auto max-h-[500px] relative">
+                      <Table className="min-w-[800px]">
+                        <TableHeader className="sticky top-0 bg-card z-10 shadow-sm">
+                          <TableRow>
+                            <TableHead className="sticky top-0 bg-card z-10 w-[80px]">Rank</TableHead>
+                            <TableHead className="sticky top-0 bg-card z-10">Manager</TableHead>
+                            <TableHead className="sticky top-0 bg-card z-10">Team Name</TableHead>
+                            <TableHead className="sticky top-0 bg-card z-10 text-right">Total</TableHead>
+                            {gameweeks.map((gw) => (
+                              <TableHead key={gw} className="sticky top-0 bg-card z-10 text-right whitespace-nowrap">
+                                GW{gw}
+                              </TableHead>
+                            ))}
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {leagueData.map((manager) => (
+                            <ManagerTableRow
+                              key={manager.entry}
+                              manager={manager}
+                              gameweeks={gameweeks}
+                              isHighestPoints={isHighestPoints}
+                            />
                           ))}
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {leagueData.map((manager) => (
-                          <ManagerTableRow
-                            key={manager.entry}
-                            manager={manager}
-                            gameweeks={gameweeks}
-                            isHighestPoints={isHighestPoints}
-                          />
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 
@@ -148,7 +267,11 @@ export const DataDisplay = memo(({ leagueData, gameweekChampions, currentGamewee
           ),
           transfers: <TransfersData leagueData={leagueData} />,
           compare: <ManagerComparison leagueData={leagueData} />,
-          stats: <Statistics leagueData={leagueData} gameweekChampions={gameweekChampions} />,
+          stats: (
+            <Suspense fallback={<EnhancedSkeleton type="stats" />}>
+              <Statistics leagueData={leagueData} gameweekChampions={gameweekChampions} />
+            </Suspense>
+          ),
           chips: <ChipsUsed leagueData={leagueData} currentGameweek={currentGameweek} />,
         }}
       />
