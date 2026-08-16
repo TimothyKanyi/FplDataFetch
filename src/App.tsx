@@ -12,10 +12,12 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { SpeedInsights } from "@vercel/speed-insights/react";
 import { Analytics } from "@vercel/analytics/react";
 import { LoadingSkeleton } from "@/components/LoadingSkeleton";
+import { CookieConsentBanner } from "@/components/CookieConsentBanner";
 
 // Lazy load pages for code splitting
 const Index = lazy(() => import("./pages/Index"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+const Privacy = lazy(() => import("./pages/Privacy"));
 
 // Optimized QueryClient configuration
 const queryClient = new QueryClient({
@@ -54,6 +56,9 @@ const App = () => {
       <Toaster />
       <Sonner />
       
+      {/* Cookie consent banner (gates future ad script loading) */}
+      <CookieConsentBanner />
+
       {/* Vercel Speed Insights - Tracks and reports Core Web Vitals and performance metrics */}
       {/* Automatically sends data to Vercel Analytics dashboard when deployed on Vercel */}
       <SpeedInsights />
@@ -66,6 +71,7 @@ const App = () => {
         <Suspense fallback={<LoadingSkeleton />}>
           <Routes>
             <Route path="/" element={<Index />} />
+            <Route path="/privacy" element={<Privacy />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

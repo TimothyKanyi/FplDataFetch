@@ -64,5 +64,14 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <!--
+      TODO(ads): Add the ad network loader script here (before the closing </body> tag).
+      For Google AdSense it looks like:
+        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXX"
+                crossorigin="anonymous"></script>
+      The ad slot component is <AdBanner slot="XXXX" /> in src/components/AdBanner.tsx.
+      Ad loading is gated behind cookie consent — see src/lib/consent.ts and
+      src/components/CookieConsentBanner.tsx.
+    -->
   </body>
 </html>

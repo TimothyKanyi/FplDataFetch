@@ -6,6 +6,7 @@ import { LoadingSkeleton } from "@/components/LoadingSkeleton";
 import { DonationSection } from "@/components/DonationSection";
 import { ShareCard } from "@/components/ShareCard";
 import { LeagueHistory } from "@/components/LeagueHistory";
+import { AdBanner } from "@/components/AdBanner";
 import { ThemeProvider } from "next-themes";
 import { toast } from "sonner";
 import { useFplData, useFplDownload, fplQueryKeys } from "@/hooks/useFplData";
@@ -136,6 +137,8 @@ const Index = () => {
                 gameweekChampions={data.gameweekChampions}
                 currentGameweek={data.currentGameweek}
               />
+              {/* Ad slot — below the standings table, not sticky. */}
+              <AdBanner slot="xxxx" />
               <ShareCard
                 key={fetchParams?.leagueCode ?? "league"}
                 leagueCode={fetchParams?.leagueCode ?? ""}
