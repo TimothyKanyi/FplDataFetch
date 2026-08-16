@@ -21,22 +21,89 @@ interface DataDisplayProps {
   currentGameweek?: number;
 }
 
+// Chip abbreviations + badge colors for the standings "Chips" column.
+const CHIP_ABBREVIATIONS: Record<string, string> = {
+  wildcard: "WC",
+  bboost: "BB",
+  "3xc": "TC",
+  freehit: "FH",
+};
+
+const CHIP_BADGE_COLORS: Record<string, string> = {
+  WC: "bg-orange-500/15 text-orange-700 dark:text-orange-300",
+  BB: "bg-blue-500/15 text-blue-700 dark:text-blue-300",
+  TC: "bg-purple-500/15 text-purple-700 dark:text-purple-300",
+  FH: "bg-green-500/15 text-green-700 dark:text-green-300",
+};
+
+// Show chips played in the current + previous two gameweeks.
+const getRecentChipBadges = (
+  manager: Manager,
+  currentGameweek?: number
+): string[] => {
+  const windowEnd =
+    currentGameweek && currentGameweek > 0
+      ? currentGameweek
+      : Number.MAX_SAFE_INTEGER;
+  const windowStart =
+    currentGameweek && currentGameweek > 2 ? currentGameweek - 2 : 1;
+
+  return (manager.chips || [])
+    .filter((chip) => chip.event >= windowStart && chip.event <= windowEnd)
+    .map((chip) => CHIP_ABBREVIATIONS[chip.name])
+    .filter((abbr): abbr is string => Boolean(abbr));
+};
+
+const ChipBadges = memo(
+  ({
+    manager,
+    currentGameweek,
+  }: {
+    manager: Manager;
+    currentGameweek?: number;
+  }) => {
+    const badges = getRecentChipBadges(manager, currentGameweek);
+    if (!badges.length) {
+      return <span className="text-xs text-muted-foreground">—</span>;
+    }
+    return (
+      <div className="flex flex-wrap gap-1">
+        {badges.map((abbr, i) => (
+          <span
+            key={`${abbr}-${i}`}
+            className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${
+              CHIP_BADGE_COLORS[abbr]
+            }`}
+          >
+            {abbr}
+          </span>
+        ))}
+      </div>
+    );
+  }
+);
+
 // Memoized table row component to prevent re-render of all rows
 const ManagerTableRow = memo(
   ({
     manager,
     gameweeks,
     isHighestPoints,
+    currentGameweek,
   }: {
     manager: Manager;
     gameweeks: string[];
     isHighestPoints: (gw: string, points: number) => boolean;
+    currentGameweek?: number;
   }) => (
     <TableRow>
       <TableCell className="font-medium">{manager.rank}</TableCell>
       <TableCell>{manager.player_name}</TableCell>
       <TableCell>{manager.entry_name}</TableCell>
       <TableCell className="text-right font-bold">{manager.total}</TableCell>
+      <TableCell>
+        <ChipBadges manager={manager} currentGameweek={currentGameweek} />
+      </TableCell>
       {gameweeks.map((gw) => {
         const points = manager.gameweek_points[gw] || 0;
         const isHighest = isHighestPoints(gw, points);
@@ -56,6 +123,7 @@ const ManagerTableRow = memo(
 // Column width constants shared by the header and virtualized rows so they stay aligned.
 const RANK_W = 80;
 const TOTAL_W = 80;
+const CHIPS_W = 120;
 const GW_W = 64;
 const ROW_HEIGHT = 40;
 const LIST_MAX_HEIGHT = 440;
@@ -69,10 +137,12 @@ const VirtualizedManagerTable = memo(
     leagueData,
     gameweeks,
     isHighestPoints,
+    currentGameweek,
   }: {
     leagueData: Manager[];
     gameweeks: string[];
     isHighestPoints: (gw: string, points: number) => boolean;
+    currentGameweek?: number;
   }) => {
     const headerClasses =
       "bg-card text-muted-foreground text-sm font-medium border-b border-border";
@@ -97,6 +167,9 @@ const VirtualizedManagerTable = memo(
             <div style={{ width: TOTAL_W }} className="shrink-0 px-4 py-2 text-right font-bold">
               {manager.total}
             </div>
+            <div style={{ width: CHIPS_W }} className="shrink-0 px-2 py-2">
+              <ChipBadges manager={manager} currentGameweek={currentGameweek} />
+            </div>
             {gameweeks.map((gw) => {
               const points = manager.gameweek_points[gw] || 0;
               const isHighest = isHighestPoints(gw, points);
@@ -115,7 +188,7 @@ const VirtualizedManagerTable = memo(
           </div>
         );
       },
-      [leagueData, gameweeks, isHighestPoints]
+      [leagueData, gameweeks, isHighestPoints, currentGameweek]
     );
 
     return (
@@ -129,6 +202,9 @@ const VirtualizedManagerTable = memo(
           <div className="flex-1 min-w-[140px] px-4 py-3">Team Name</div>
           <div style={{ width: TOTAL_W }} className="shrink-0 px-4 py-3 text-right">
             Total
+          </div>
+          <div style={{ width: CHIPS_W }} className="shrink-0 px-2 py-3">
+            Chips
           </div>
           {gameweeks.map((gw) => (
             <div
@@ -187,6 +263,7 @@ export const DataDisplay = memo(({ leagueData, gameweekChampions, currentGamewee
                         leagueData={leagueData}
                         gameweeks={gameweeks}
                         isHighestPoints={isHighestPoints}
+                        currentGameweek={currentGameweek}
                       />
                     </div>
                   ) : (
@@ -198,6 +275,7 @@ export const DataDisplay = memo(({ leagueData, gameweekChampions, currentGamewee
                             <TableHead className="sticky top-0 bg-card z-10">Manager</TableHead>
                             <TableHead className="sticky top-0 bg-card z-10">Team Name</TableHead>
                             <TableHead className="sticky top-0 bg-card z-10 text-right">Total</TableHead>
+                            <TableHead className="sticky top-0 bg-card z-10 w-[130px]">Chips</TableHead>
                             {gameweeks.map((gw) => (
                               <TableHead key={gw} className="sticky top-0 bg-card z-10 text-right whitespace-nowrap">
                                 GW{gw}
@@ -212,6 +290,7 @@ export const DataDisplay = memo(({ leagueData, gameweekChampions, currentGamewee
                               manager={manager}
                               gameweeks={gameweeks}
                               isHighestPoints={isHighestPoints}
+                              currentGameweek={currentGameweek}
                             />
                           ))}
                         </TableBody>

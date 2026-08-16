@@ -4,6 +4,8 @@ import { LeagueForm } from "@/components/LeagueForm";
 import { DataDisplay } from "@/components/DataDisplay";
 import { LoadingSkeleton } from "@/components/LoadingSkeleton";
 import { DonationSection } from "@/components/DonationSection";
+import { ShareCard } from "@/components/ShareCard";
+import { LeagueHistory } from "@/components/LeagueHistory";
 import { ThemeProvider } from "next-themes";
 import { toast } from "sonner";
 import { useFplData, useFplDownload, fplQueryKeys } from "@/hooks/useFplData";
@@ -128,11 +130,20 @@ const Index = () => {
           {isInitialLoading ? (
             <LoadingSkeleton />
           ) : hasData ? (
-            <MemoizedDataDisplay
-              leagueData={data.leagueData}
-              gameweekChampions={data.gameweekChampions}
-              currentGameweek={data.currentGameweek}
-            />
+            <>
+              <MemoizedDataDisplay
+                leagueData={data.leagueData}
+                gameweekChampions={data.gameweekChampions}
+                currentGameweek={data.currentGameweek}
+              />
+              <ShareCard
+                key={fetchParams?.leagueCode ?? "league"}
+                leagueCode={fetchParams?.leagueCode ?? ""}
+                leagueName={data.leagueName}
+                leagueData={data.leagueData}
+              />
+              <LeagueHistory leagueCode={fetchParams?.leagueCode ?? ""} />
+            </>
           ) : null}
 
           <DonationSection />

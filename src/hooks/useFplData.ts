@@ -142,6 +142,12 @@ export const useFplData = (params: FetchParams | null) => {
     gcTime: 30 * 60 * 1000, // 30 minutes (formerly cacheTime)
     retry: 2,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
+    // Live gameweek tracking: poll every 60s while a gameweek is live.
+    // The query is considered unfocused (and won't poll) when the tab is hidden,
+    // because focusManager is wired to the Page Visibility API in App.tsx.
+    refetchInterval: (query) =>
+      query.state.data?.isLive ? 60 * 1000 : false,
+    refetchIntervalInBackground: false,
   });
 };
 

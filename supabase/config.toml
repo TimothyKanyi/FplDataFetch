@@ -6,5 +6,8 @@ verify_jwt = false
 [functions.prewarm-cache]
 verify_jwt = false
 
+[functions.get-league-history]
+verify_jwt = false
+
 [functions.generate-excel]
 verify_jwt = false
