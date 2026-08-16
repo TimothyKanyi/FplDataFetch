@@ -1,8 +1,8 @@
-import { memo, lazy, Suspense, useCallback } from "react";
+import { memo, lazy, Suspense, useCallback, useState } from "react";
 import { List } from "react-window";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Trophy } from "lucide-react";
+import { Trophy, ChevronDown } from "lucide-react";
 import { TransfersData } from "./TransfersData";
 import { ManagerComparison } from "./ManagerComparison";
 import { ChipsUsed } from "./ChipsUsed";
@@ -103,6 +103,54 @@ const ChipBadges = memo(
             {abbr}
           </span>
         ))}
+      </div>
+    );
+  }
+);
+
+// Mobile card-per-manager list (below sm) with expandable details.
+const MobileManagerCard = memo(
+  ({ manager, currentGameweek }: { manager: Manager; currentGameweek?: number }) => {
+    const [open, setOpen] = useState(false);
+
+    return (
+      <div className="rounded-lg border p-3">
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          className="flex w-full items-center justify-between gap-2 text-left"
+        >
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="w-6 shrink-0 font-semibold">{manager.rank}</span>
+            <RankMovement manager={manager} />
+            <div className="min-w-0">
+              <p className="truncate font-medium">{manager.player_name}</p>
+              <p className="truncate text-xs text-muted-foreground">{manager.entry_name}</p>
+            </div>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <span className="font-bold">{manager.total} pts</span>
+            <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`} />
+          </div>
+        </button>
+
+        {open && (
+          <div className="mt-3 space-y-2 border-t pt-3 text-sm">
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">Chips:</span>
+              <ChipBadges manager={manager} currentGameweek={currentGameweek} />
+            </div>
+            <div className="flex flex-wrap gap-1.5 text-xs">
+              {Object.entries(manager.gameweek_points)
+                .slice(-3)
+                .map(([gw, pts]) => (
+                  <span key={gw} className="rounded bg-muted px-2 py-0.5">
+                    GW{gw}: {pts}
+                  </span>
+                ))}
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -317,6 +365,19 @@ export const DataDisplay = memo(({ leagueData, gameweekChampions, currentGamewee
                   </div>
                 </CardHeader>
                 <CardContent>
+                  {/* Mobile: card-per-manager list (below sm) */}
+                  <div className="space-y-2 sm:hidden">
+                    {leagueData.map((manager) => (
+                      <MobileManagerCard
+                        key={manager.entry}
+                        manager={manager}
+                        currentGameweek={currentGameweek}
+                      />
+                    ))}
+                  </div>
+
+                  {/* sm+: full table (virtualized when large) */}
+                  <div className="hidden sm:block">
                   {leagueData.length > 50 ? (
                     <div className="w-full rounded-md border overflow-x-auto relative">
                       <VirtualizedManagerTable
@@ -358,6 +419,7 @@ export const DataDisplay = memo(({ leagueData, gameweekChampions, currentGamewee
                       </Table>
                     </div>
                   )}
+                  </div>
                 </CardContent>
               </Card>
 
