@@ -7,13 +7,13 @@ import { ManagerComparison } from "./ManagerComparison";
 import { Statistics } from "./Statistics";
 import { ChipsUsed } from "./ChipsUsed";
 import { AnimatedTabs } from "./AnimatedTabs";
-import { AIScout } from "./AIScout";
 import type { Manager, GameweekChampion } from "@/hooks/useFplData";
 import { useGameweeks, useIsHighestPoints } from "@/hooks/useFplComputed";
 
 interface DataDisplayProps {
   leagueData: Manager[] | null;
   gameweekChampions: GameweekChampion[] | null;
+  currentGameweek?: number;
 }
 
 // Memoized table row component to prevent re-render of all rows
@@ -48,7 +48,7 @@ const ManagerTableRow = memo(
   )
 );
 
-export const DataDisplay = memo(({ leagueData, gameweekChampions }: DataDisplayProps) => {
+export const DataDisplay = memo(({ leagueData, gameweekChampions, currentGameweek }: DataDisplayProps) => {
   // Hooks must be called before any early return
   const gameweeks = useGameweeks(leagueData);
   const isHighestPoints = useIsHighestPoints(leagueData);
@@ -149,14 +149,8 @@ export const DataDisplay = memo(({ leagueData, gameweekChampions }: DataDisplayP
           transfers: <TransfersData leagueData={leagueData} />,
           compare: <ManagerComparison leagueData={leagueData} />,
           stats: <Statistics leagueData={leagueData} gameweekChampions={gameweekChampions} />,
-          chips: <ChipsUsed leagueData={leagueData} />,
+          chips: <ChipsUsed leagueData={leagueData} currentGameweek={currentGameweek} />,
         }}
-      />
-
-      {/* AI Scout Chat Interface */}
-      <AIScout 
-        leagueData={leagueData} 
-        gameweekChampions={gameweekChampions}
       />
     </div>
   );

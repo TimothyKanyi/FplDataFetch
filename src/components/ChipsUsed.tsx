@@ -22,6 +22,7 @@ interface Manager {
 
 interface ChipsUsedProps {
   leagueData: Manager[];
+  currentGameweek?: number;
 }
 
 const chipDisplayNames: { [key: string]: string } = {
@@ -55,8 +56,13 @@ const chipColors: { [key: string]: { used: string; available: string; expired: s
 };
 
 // Get current gameweek from data or fallback
-const getCurrentGameweek = (leagueData: Manager[]): number => {
-  // Find the highest gameweek key across all managers
+const getCurrentGameweek = (leagueData: Manager[], providedGW?: number): number => {
+  // Use provided current gameweek if available (from FPL API)
+  if (providedGW && providedGW > 0) {
+    return providedGW;
+  }
+  
+  // Fallback: Find the highest gameweek key across all managers
   let maxGW = 0;
   leagueData.forEach(manager => {
     Object.keys(manager.gameweek_points).forEach(key => {
@@ -175,10 +181,10 @@ const ChipStatus = memo(({
   );
 });
 
-export const ChipsUsed = memo(({ leagueData }: ChipsUsedProps) => {
+export const ChipsUsed = memo(({ leagueData, currentGameweek }: ChipsUsedProps) => {
   const allChips = ["3xc", "bboost", "freehit", "wildcard"];
   
-  const currentGW = useMemo(() => getCurrentGameweek(leagueData), [leagueData]);
+  const currentGW = useMemo(() => getCurrentGameweek(leagueData, currentGameweek), [leagueData, currentGameweek]);
 
   return (
     <Card>

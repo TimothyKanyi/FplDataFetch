@@ -131,6 +131,7 @@ const Index = () => {
             <MemoizedDataDisplay
               leagueData={data.leagueData}
               gameweekChampions={data.gameweekChampions}
+              currentGameweek={data.currentGameweek}
             />
           ) : null}
 

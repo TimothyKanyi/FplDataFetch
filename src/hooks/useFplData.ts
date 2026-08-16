@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 // Types
@@ -38,6 +39,7 @@ export interface GameweekChampion {
 export interface FplDataResponse {
   leagueData: Manager[];
   gameweekChampions: GameweekChampion[];
+  currentGameweek: number;
 }
 
 export interface FetchParams {
@@ -106,14 +108,30 @@ export const useFplData = (params: FetchParams | null) => {
         { leagueCode, startGW, endGW },
         signal
       ),
-    enabled: !!params,
-    staleTime: 5 * 60 * 1000, // 5 minutes - data considered fresh
-    gcTime: 30 * 60 * 1000, // 30 minutes - keep in cache even if unused
-    refetchOnWindowFocus: true,
-    refetchOnReconnect: true,
+    enabled: Boolean(leagueCode && startGW && endGW),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 30 * 60 * 1000, // 30 minutes (formerly cacheTime)
     retry: 2,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
   });
+};
+
+/**
+ * Hook to get current gameweek from data
+ */
+export const useCurrentGameweek = (leagueData: Manager[] | null): number => {
+  return useMemo(() => {
+    if (!leagueData?.length) return 0;
+    // Find the highest gameweek key across all managers as fallback
+    let maxGW = 0;
+    leagueData.forEach(manager => {
+      Object.keys(manager.gameweek_points).forEach(key => {
+        const gw = parseInt(key, 10);
+        if (!isNaN(gw) && gw > maxGW) maxGW = gw;
+      });
+    });
+    return maxGW > 0 ? maxGW : 0;
+  }, [leagueData]);
 };
 
 /**
