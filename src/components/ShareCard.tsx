@@ -71,15 +71,15 @@ export const ShareCard = ({ leagueCode, leagueName, leagueData }: ShareCardProps
     setExporting(true);
     try {
       const dataUrl = await toPng(cardRef.current, {
-        width: 640,
-        height: 400,
         pixelRatio: 2,
         cacheBust: true,
       });
       const link = document.createElement("a");
       link.download = `fpl_league_${leagueCode}_card.png`;
       link.href = dataUrl;
+      document.body.appendChild(link);
       link.click();
+      document.body.removeChild(link);
       toast.success("Share card downloaded!");
     } catch (err) {
       console.error("Failed to export share card:", err);
@@ -121,63 +121,74 @@ export const ShareCard = ({ leagueCode, leagueName, leagueData }: ShareCardProps
           </Select>
         </div>
 
-        {/* Fixed-size card (captured by html-to-image) */}
+        {/* Fixed-width card (captured by html-to-image). Uses explicit colors
+            (not theme variables) so the exported PNG is always consistent and
+            the height follows the content so nothing gets cropped. */}
         <div className="overflow-x-auto">
           <div
             ref={cardRef}
             style={{
               width: 640,
-              height: 400,
+              backgroundColor: "#ffffff",
+              color: "#0f172a",
               fontFamily:
                 "system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
             }}
-            className="mx-auto flex flex-col rounded-xl border border-border bg-background p-6 text-foreground"
+            className="mx-auto flex flex-col rounded-xl border border-slate-200 p-6"
           >
             {/* Header */}
             <div className="flex items-start justify-between">
               <div className="min-w-0">
-                <p className="text-sm uppercase tracking-wide text-muted-foreground">
+                <p className="text-sm uppercase tracking-wide text-slate-500">
                   FPL Mini-League
                 </p>
-                <h3 className="text-2xl font-bold leading-tight truncate">
+                <h3 className="text-2xl font-bold leading-tight truncate text-slate-900">
                   {leagueName || `League ${leagueCode}`}
                 </h3>
               </div>
-              <Trophy className="h-8 w-8 shrink-0 text-accent" />
+              <Trophy className="h-8 w-8 shrink-0 text-emerald-600" />
             </div>
 
             {/* Top 3 */}
             <div className="mt-4 flex-1 space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                 Top 3 Managers
               </p>
               {topThree.map((m, i) => (
                 <div
                   key={m.entry}
-                  className="flex items-center gap-3 rounded-lg border border-border px-3 py-2"
+                  className="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2"
                 >
-                  <span className="w-8 text-lg font-bold text-accent">#{i + 1}</span>
+                  <span className="w-8 text-lg font-bold text-emerald-600">
+                    #{i + 1}
+                  </span>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium">{m.player_name}</p>
-                    <p className="truncate text-sm text-muted-foreground">
+                    <p className="truncate font-medium text-slate-900">
+                      {m.player_name}
+                    </p>
+                    <p className="truncate text-sm text-slate-500">
                       {m.entry_name}
                     </p>
                   </div>
-                  <span className="font-bold">{m.total} pts</span>
+                  <span className="font-bold text-slate-900">
+                    {m.total} pts
+                  </span>
                 </div>
               ))}
             </div>
 
             {/* Your rank */}
-            <div className="mt-4 flex items-center justify-between rounded-lg bg-primary/10 px-4 py-3">
-              <span className="text-sm font-medium text-muted-foreground">
+            <div className="mt-4 flex items-center justify-between rounded-lg bg-emerald-50 px-4 py-3">
+              <span className="text-sm font-medium text-slate-500">
                 Your rank
               </span>
               {myManager ? (
                 <div className="flex items-center gap-3">
-                  <span className="text-2xl font-bold">#{myManager.rank}</span>
+                  <span className="text-2xl font-bold text-slate-900">
+                    #{myManager.rank}
+                  </span>
                   {rankMovement != null && rankMovement > 0 && (
-                    <span className="text-sm font-semibold text-green-600">
+                    <span className="text-sm font-semibold text-emerald-600">
                       ▲ {rankMovement}
                     </span>
                   )}
@@ -187,14 +198,14 @@ export const ShareCard = ({ leagueCode, leagueName, leagueData }: ShareCardProps
                     </span>
                   )}
                   {rankMovement === 0 && (
-                    <span className="text-sm text-muted-foreground">—</span>
+                    <span className="text-sm text-slate-500">—</span>
                   )}
-                  <span className="max-w-[180px] truncate text-sm">
+                  <span className="max-w-[180px] truncate text-sm text-slate-700">
                     {myManager.player_name}
                   </span>
                 </div>
               ) : (
-                <span className="text-sm text-muted-foreground">
+                <span className="text-sm text-slate-500">
                   Select your team above
                 </span>
               )}
