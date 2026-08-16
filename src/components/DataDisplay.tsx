@@ -13,7 +13,10 @@ import { useGameweeks, useIsHighestPoints } from "@/hooks/useFplComputed";
 
 // Lazy-load the Statistics tab so recharts (a heavy dependency) is split out of
 // the initial/shared bundle and only fetched when the user opens the Stats tab.
-const Statistics = lazy(() => import("./Statistics"));
+// Statistics is a named export, so map it to the default export React.lazy expects.
+const Statistics = lazy(() =>
+  import("./Statistics").then((module) => ({ default: module.Statistics }))
+);
 
 interface DataDisplayProps {
   leagueData: Manager[] | null;
