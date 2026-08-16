@@ -1,5 +1,4 @@
 import { useEffect, Suspense, lazy } from "react";
-import { sdk } from "@farcaster/miniapp-sdk";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -47,7 +46,27 @@ focusManager.setEventListener((handleFocus) => {
 
 const App = () => {
   useEffect(() => {
-    sdk.actions.ready();
+    // The Farcaster miniapp SDK pulls in a large Solana/crypto dependency tree
+    // (~440 kB), so load it lazily only when we need to signal "ready" inside
+    // a Farcaster client. Outside that context the import/call is a silent no-op.
+    let cancelled = false;
+    import("@farcaster/miniapp-sdk")
+      .then(({ sdk }) => {
+        if (!cancelled) {
+          try {
+            sdk?.actions?.ready();
+          } catch {
+            // Not running inside a Farcaster client — nothing to do.
+          }
+        }
+      })
+      .catch(() => {
+        // SDK unavailable — nothing to do.
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   return (
