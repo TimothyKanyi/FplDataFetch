@@ -13,6 +13,7 @@ import { SpeedInsights } from "@vercel/speed-insights/react";
 import { Analytics } from "@vercel/analytics/react";
 import { LoadingSkeleton } from "@/components/LoadingSkeleton";
 import { CookieConsentBanner } from "@/components/CookieConsentBanner";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 // Lazy load pages for code splitting
 const Index = lazy(() => import("./pages/Index"));
@@ -69,12 +70,14 @@ const App = () => {
       
       <BrowserRouter>
         <Suspense fallback={<LoadingSkeleton />}>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/privacy" element={<Privacy />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <ErrorBoundary name="app">
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/privacy" element={<Privacy />} />
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </ErrorBoundary>
         </Suspense>
       </BrowserRouter>
     </TooltipProvider>

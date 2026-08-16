@@ -8,6 +8,7 @@ import { ManagerComparison } from "./ManagerComparison";
 import { ChipsUsed } from "./ChipsUsed";
 import { AnimatedTabs } from "./AnimatedTabs";
 import { EnhancedSkeleton } from "./EnhancedSkeleton";
+import { ErrorBoundary } from "./ErrorBoundary";
 import type { Manager, GameweekChampion } from "@/hooks/useFplData";
 import { useGameweeks, useIsHighestPoints } from "@/hooks/useFplComputed";
 
@@ -250,7 +251,8 @@ export const DataDisplay = memo(({ leagueData, gameweekChampions, currentGamewee
         defaultTab="standings"
         children={{
           standings: (
-            <>
+            <ErrorBoundary name="standings">
+              <>
               {/* League Standings */}
               <Card>
                 <CardHeader>
@@ -345,16 +347,31 @@ export const DataDisplay = memo(({ leagueData, gameweekChampions, currentGamewee
                   </div>
                 </CardContent>
               </Card>
-            </>
+              </>
+            </ErrorBoundary>
           ),
-          transfers: <TransfersData leagueData={leagueData} />,
-          compare: <ManagerComparison leagueData={leagueData} />,
+          transfers: (
+            <ErrorBoundary name="transfers">
+              <TransfersData leagueData={leagueData} />
+            </ErrorBoundary>
+          ),
+          compare: (
+            <ErrorBoundary name="compare">
+              <ManagerComparison leagueData={leagueData} />
+            </ErrorBoundary>
+          ),
           stats: (
-            <Suspense fallback={<EnhancedSkeleton type="stats" />}>
-              <Statistics leagueData={leagueData} gameweekChampions={gameweekChampions} />
-            </Suspense>
+            <ErrorBoundary name="stats">
+              <Suspense fallback={<EnhancedSkeleton type="stats" />}>
+                <Statistics leagueData={leagueData} gameweekChampions={gameweekChampions} />
+              </Suspense>
+            </ErrorBoundary>
           ),
-          chips: <ChipsUsed leagueData={leagueData} currentGameweek={currentGameweek} />,
+          chips: (
+            <ErrorBoundary name="chips">
+              <ChipsUsed leagueData={leagueData} currentGameweek={currentGameweek} />
+            </ErrorBoundary>
+          ),
         }}
       />
     </div>
