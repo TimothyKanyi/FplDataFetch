@@ -21,6 +21,11 @@ build
 # Supabase local CLI state
 supabase/.temp/
 
+# Private project notes
+/CLEANUP_SUMMARY.md
+/NEW_FEATURES.md
+/PERFORMANCE_AUDIT.md
+
 
 # Editor directories and files
 .vscode/*
