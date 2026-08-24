@@ -108,6 +108,34 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || Deno.env.get("SUPABASE_KEY") || "";
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, { global: { headers: { 'x-edge-function': 'true' } } });
 
+// Reserved demo league ID (also defined in src/pages/Index.tsx and prewarm-cache).
+const DEMO_LEAGUE_CODE = "demo-league-001";
+
+// FPL league IDs are numeric; the reserved demo ID is the only non-numeric
+// exception and is always served from cache (never forwarded to the FPL API).
+const isValidLeagueCode = (code: string): boolean =>
+  /^\d{1,10}$/.test(code) || code === DEMO_LEAGUE_CODE;
+
+// Simple in-memory rate limiter for the FPL fallback (fresh fetch) path.
+// Edge Functions are stateless across isolates, so this is best-effort and
+// only blunts obvious abuse — it is not a hard distributed limit.
+const RATE_LIMIT_MAX = 10; // fresh fetches per league
+const RATE_LIMIT_WINDOW_MS = 60 * 1000; // per minute
+const freshFetchLog = new Map<string, number[]>();
+
+const isRateLimited = (key: string): boolean => {
+  const nowMs = Date.now();
+  const windowStart = nowMs - RATE_LIMIT_WINDOW_MS;
+  const recent = (freshFetchLog.get(key) || []).filter((t) => t > windowStart);
+  if (recent.length >= RATE_LIMIT_MAX) {
+    freshFetchLog.set(key, recent);
+    return true;
+  }
+  recent.push(nowMs);
+  freshFetchLog.set(key, recent);
+  return false;
+};
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -118,12 +146,19 @@ serve(async (req) => {
       ? Object.fromEntries(new URL(req.url).searchParams.entries())
       : await req.json();
 
-    const leagueCode = body.leagueCode || body.league || body.id || body.league_id;
-    const startGW = Number(body.startGW || body.start_gw || body.start || 1);
-    const endGW = Number(body.endGW || body.end_gw || body.end || 38);
+    const leagueCode = String(body.leagueCode || body.league || body.id || body.league_id || "").trim();
+    const startGW = Math.min(38, Math.max(1, Number(body.startGW || body.start_gw || body.start || 1) || 1));
+    const endGW = Math.min(38, Math.max(1, Number(body.endGW || body.end_gw || body.end || 38) || 38));
 
     if (!leagueCode) {
       return new Response(JSON.stringify({ error: 'leagueCode required' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    if (!isValidLeagueCode(leagueCode)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid league ID. League IDs are numeric (e.g. 123456).' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     console.log(`Fetching league ${leagueCode} from GW${startGW} to GW${endGW}`);
@@ -163,6 +198,14 @@ serve(async (req) => {
     }
 
     // If missing or stale, fetch fresh data from FPL API (existing logic)
+    // Rate-limit the fallback path so abuse can't hammer the FPL API.
+    if (isRateLimited(leagueCode)) {
+      return new Response(
+        JSON.stringify({ error: 'Rate limit exceeded. Please try again shortly.' }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Fetch all pages of league standings
     let allManagers: any[] = [];
     let leagueName = "";

@@ -41,33 +41,36 @@ const StorylinesSkeleton = memo(() => (
 const StandingsSkeleton = memo(() => (
   <Card>
     <CardHeader>
-      <Skeleton className="h-6 w-40" />
-      <Skeleton className="h-4 w-60" />
+      <Skeleton className="h-6 w-40 max-w-full" />
+      <Skeleton className="h-4 w-60 max-w-full" />
     </CardHeader>
     <CardContent>
-      <div className="space-y-2">
-        {/* Table header */}
-        <div className="flex gap-2">
-          <Skeleton className="h-8 w-16" />
-          <Skeleton className="h-8 w-32" />
-          <Skeleton className="h-8 w-32" />
-          <Skeleton className="h-8 w-20" />
-          {[...Array(5)].map((_, i) => (
-            <Skeleton key={i} className="h-8 w-16" />
-          ))}
-        </div>
-        {/* Table rows */}
-        {[...Array(8)].map((_, rowIdx) => (
-          <div key={rowIdx} className="flex gap-2">
-            <Skeleton className="h-10 w-16" />
-            <Skeleton className="h-10 w-32" />
-            <Skeleton className="h-10 w-32" />
-            <Skeleton className="h-10 w-20" />
+      {/* Scroll the wide table horizontally on small screens instead of overflowing */}
+      <div className="w-full overflow-x-auto">
+        <div className="min-w-[560px] space-y-2">
+          {/* Table header */}
+          <div className="flex gap-2 w-max">
+            <Skeleton className="h-8 w-16" />
+            <Skeleton className="h-8 w-32" />
+            <Skeleton className="h-8 w-32" />
+            <Skeleton className="h-8 w-20" />
             {[...Array(5)].map((_, i) => (
-              <Skeleton key={i} className="h-10 w-16" />
+              <Skeleton key={i} className="h-8 w-16" />
             ))}
           </div>
-        ))}
+          {/* Table rows */}
+          {[...Array(8)].map((_, rowIdx) => (
+            <div key={rowIdx} className="flex gap-2 w-max">
+              <Skeleton className="h-10 w-16" />
+              <Skeleton className="h-10 w-32" />
+              <Skeleton className="h-10 w-32" />
+              <Skeleton className="h-10 w-20" />
+              {[...Array(5)].map((_, i) => (
+                <Skeleton key={i} className="h-10 w-16" />
+              ))}
+            </div>
+          ))}
+        </div>
       </div>
     </CardContent>
   </Card>

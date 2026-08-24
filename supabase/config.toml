@@ -1,4 +1,4 @@
-project_id = "jbgtjqscykwjnuofxysz"
+project_id = "rlvtpzfqrgdonrajhmpg"
 
 [functions.fetch-league-data]
 verify_jwt = false
