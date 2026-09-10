@@ -1,0 +1,19 @@
+{
+  // Type-checking config for the Deno Edge Functions, used only by the editor
+  // (Deno/Supabase CLI does not read tsconfig.json). Without this, VS Code
+  // type-checks these files against the browser project and reports false
+  // errors for Deno globals and URL imports.
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "noEmit": true,
+    "strict": false,
+    "noImplicitAny": false,
+    "skipLibCheck": true,
+    "types": []
+  },
+  "include": ["**/*.ts"],
+  "exclude": ["node_modules"]
+}
