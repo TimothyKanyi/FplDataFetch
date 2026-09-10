@@ -144,11 +144,21 @@ export const useFplData = (params: FetchParams | null) => {
     gcTime: 30 * 60 * 1000, // 30 minutes (formerly cacheTime)
     retry: 2,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
-    // Live gameweek tracking: poll every 60s while a gameweek is live.
+    // Live gameweek tracking: poll every 60s while a gameweek is live, and keep
+    // a slow baseline poll the rest of the time.
+    //
+    // The baseline is load-bearing, not padding. `refetchInterval` is only
+    // re-evaluated when the query updates, so returning `false` while idle meant
+    // the client could never observe `isLive` flipping to true: the poll that
+    // would have discovered it had already switched itself off. A page opened
+    // before kickoff would therefore sit on stale data until a manual refresh.
+    // Idle polls are cheap because the edge function serves them from its own
+    // 15-minute cache.
+    //
     // The query is considered unfocused (and won't poll) when the tab is hidden,
     // because focusManager is wired to the Page Visibility API in App.tsx.
     refetchInterval: (query) =>
-      query.state.data?.isLive ? 60 * 1000 : false,
+      query.state.data?.isLive ? 60 * 1000 : 5 * 60 * 1000,
     refetchIntervalInBackground: false,
   });
 };
