@@ -268,8 +268,13 @@ serve(async (req) => {
     // Build players map from bootstrap data
     const playersMap = new Map((bootstrapData.elements || []).map((player: any) => [player.id, `${player.web_name}`]));
 
-    // Get the real current FPL gameweek from bootstrap data
-    const currentGameweek = bootstrapData.current_event || bootstrapData.current_event_id || 0;
+    // Get the real current FPL gameweek from bootstrap data.
+    // Must come from the events array's `is_current` flag — the same source the
+    // TTL logic above uses. bootstrap-static does NOT populate a top-level
+    // `current_event` field, so `bootstrapData.current_event || ... || 0` always
+    // evaluated to 0. That 0 was then returned to the client and, worse, written
+    // into league_history snapshots by prewarm-cache.
+    const currentGameweek = currentEvent?.id ?? 0;
 
     // Fetch gameweek history and transfer data for all managers in parallel
     const managersWithHistory: Manager[] = [];

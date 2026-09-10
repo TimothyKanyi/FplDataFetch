@@ -60,10 +60,13 @@ serve(async (req) => {
 
         // Fetch bootstrap
         const bootstrap = await fetchWithRetry<any>('https://fantasy.premierleague.com/api/bootstrap-static/');
-        const currentGameweek = bootstrap.current_event || bootstrap.current_event_id || 0;
         const currentEvent = (bootstrap?.events || []).find((e: any) => e.is_current === true) || null;
         const isLive = currentEvent ? !currentEvent.finished : false;
         const deadlineTime = currentEvent?.deadline_time ?? null;
+        // Derive from `is_current`: bootstrap-static has no top-level
+        // `current_event` field, so the previous `bootstrap.current_event || 0`
+        // always yielded 0 and got embedded in every league_history snapshot.
+        const currentGameweek = currentEvent?.id ?? 0;
 
         // Fetch standings pages
         let allManagers: any[] = [];
