@@ -75,26 +75,15 @@ const getCurrentGameweek = (leagueData: Manager[], providedGW?: number): number 
 
 // Get all instances of a chip type, sorted by event
 const getChipUses = (chips: Chip[], chipType: string): number[] => {
-  // Debug: log what we're searching
-  console.log(`[ChipsDebug] Searching for ${chipType} in:`, chips);
-  
-  const matchingChips = chips.filter(chip => {
-    const match = chip.name === chipType;
-    if (match) {
-      console.log(`[ChipsDebug] Found ${chipType}: event=${chip.event}, type=${typeof chip.event}`);
-    }
-    return match;
-  });
-  
+  const matchingChips = chips.filter(chip => chip.name === chipType);
+
   const events = matchingChips.map(chip => {
     // Ensure event is a number
     const eventNum = typeof chip.event === 'string' ? parseInt(chip.event, 10) : chip.event;
     return eventNum;
   }).filter(n => !isNaN(n));
-  
-  const sorted = events.sort((a, b) => a - b);
-  console.log(`[ChipsDebug] ${chipType} sorted events:`, sorted);
-  return sorted;
+
+  return events.sort((a, b) => a - b);
 };
 
 // Render chip status with 2025/26 double-chip rules
@@ -115,19 +104,13 @@ const ChipStatus = memo(({
   const FIRST_HALF_DEADLINE = 19;
   const SECOND_HALF_START = 20;
   
-  // Debug logging
-  console.log(`[ChipStatus] ${chipType}: chipUses=${JSON.stringify(chipUses)}, currentGW=${currentGW}`);
-  
   // Categorize uses by gameweek - explicitly check boundaries
   const slot1Candidates = chipUses.filter(gw => gw >= 1 && gw <= FIRST_HALF_DEADLINE);
   const slot2Candidates = chipUses.filter(gw => gw >= SECOND_HALF_START);
-  
+
   const slot1Use = slot1Candidates.length > 0 ? slot1Candidates[0] : null;
   const slot2Use = slot2Candidates.length > 0 ? slot2Candidates[0] : null;
-  
-  console.log(`[ChipStatus] ${chipType}: slot1Candidates=${JSON.stringify(slot1Candidates)}, slot2Candidates=${JSON.stringify(slot2Candidates)}`);
-  console.log(`[ChipStatus] ${chipType}: slot1Use=${slot1Use}, slot2Use=${slot2Use}`);
-  
+
   // Slot 1: GW 1-19
   const getSlot1Status = (): { text: string; variant: 'used' | 'available' | 'expired' } => {
     if (slot1Use) {
@@ -152,9 +135,7 @@ const ChipStatus = memo(({
   
   const slot1Status = getSlot1Status();
   const slot2Status = getSlot2Status();
-  
-  console.log(`[ChipStatus] ${chipType}: slot1Status=${JSON.stringify(slot1Status)}, slot2Status=${JSON.stringify(slot2Status)}`);
-  
+
   return (
     <div className="flex flex-col gap-1 min-w-[90px]">
       {/* First Chip Slot (GW 1-19) */}
@@ -222,11 +203,6 @@ export const ChipsUsed = memo(({ leagueData, currentGameweek }: ChipsUsedProps) 
             </TableHeader>
             <TableBody>
               {leagueData.map((manager) => {
-                // Debug: Log manager's chips
-                console.log(`[ChipsUsed] Manager ${manager.player_name} (${manager.entry}):`, 
-                  manager.chips.length, 'chips:', 
-                  manager.chips.map(c => `${c.name}@GW${c.event}`).join(', '));
-                
                 return (
                   <TableRow key={manager.entry}>
                     <TableCell className="font-medium text-center">{manager.rank}</TableCell>
