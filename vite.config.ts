@@ -44,11 +44,21 @@ export default defineConfig(({ mode }) => ({
         navigateFallback: "/index.html",
         runtimeCaching: [
           {
-            // Stale-while-revalidate for the league data endpoint so a
-            // previously-viewed league works offline. Only GET is cacheable.
+            // Network-first for the league data endpoint: always try the
+            // network so live-gameweek polling returns genuinely fresh
+            // standings, and only fall back to the cached copy when the
+            // network is unavailable (a previously-viewed league still works
+            // offline). Only GET is cacheable.
+            //
+            // StaleWhileRevalidate was serving the previous poll's body on
+            // every request, which put the live view a full poll interval
+            // (60s) behind and could serve a body up to maxAgeSeconds old.
+            // Deliberately no networkTimeoutSeconds: a cold cache-miss on the
+            // edge function can legitimately take well over 10s, and timing
+            // out into the cache would break those loads.
             urlPattern: ({ url }) =>
               url.pathname.includes("/fetch-league-data"),
-            handler: "StaleWhileRevalidate",
+            handler: "NetworkFirst",
             options: {
               cacheName: "fpl-league-api",
               expiration: {
