@@ -3,9 +3,9 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 // CORS: allow only the app's known origins (custom domain, Vercel prod, local dev).
 // Additional origins (e.g. Vercel preview URLs) can be added via the
 // ALLOWED_ORIGINS env var (comma-separated) without a code change.
+// NOTE: the lapsed custom domain (fpldatafetcher.online) was removed here — it
+// is now controlled by a third party, so trusting it would grant them API access.
 const STATIC_ALLOWED_ORIGINS = [
-  'https://www.fpldatafetcher.online',
-  'https://fpldatafetcher.online',
   'https://fpl-data-fetch.vercel.app',
   'http://localhost:8080',
 ];

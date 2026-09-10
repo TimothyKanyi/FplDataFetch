@@ -12,22 +12,22 @@
   "miniapp": {
     "version": "1",
     "name": "FPL Data Fetcher",
-    "homeUrl": "https://www.fpldatafetcher.online/",
-    "iconUrl": "https://www.fpldatafetcher.online/og-image.png",
-    "splashImageUrl": "https://www.fpldatafetcher.online/og-image.png",
+    "homeUrl": "https://fpl-data-fetch.vercel.app/",
+    "iconUrl": "https://fpl-data-fetch.vercel.app/og-image.png",
+    "splashImageUrl": "https://fpl-data-fetch.vercel.app/og-image.png",
     "splashBackgroundColor": "#0A0A0A",
     "subtitle": "View FPL Mini league data",
     "description": "Fetch your Fantasy Premier League mini-league data instantly — view live rankings, gameweek scores, and manager stats.",
     "screenshotUrls": [
-      "https://www.fpldatafetcher.online/og-image.png"
+      "https://fpl-data-fetch.vercel.app/og-image.png"
     ],
     "primaryCategory": "games",
     "tags": ["fantasy", "football", "FPL", "data", "analytics"],
-    "heroImageUrl": "https://www.fpldatafetcher.online/og-image.png",
+    "heroImageUrl": "https://fpl-data-fetch.vercel.app/og-image.png",
     "tagline": "Instant FPL Data",
     "ogTitle": "FPL Data Fetcher",
     "ogDescription": "Instantly view Fantasy Premier League standings for any mini-league.",
-    "ogImageUrl": "https://www.fpldatafetcher.online/og-image.png",
+    "ogImageUrl": "https://fpl-data-fetch.vercel.app/og-image.png",
     "noindex": false
   }
 }

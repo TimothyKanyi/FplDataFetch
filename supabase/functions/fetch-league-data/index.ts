@@ -1,12 +1,12 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
-// CORS: allow only the app's known origins (custom domain, Vercel prod, local dev).
+// CORS: allow only the app's known origins (Vercel prod, local dev).
+// The custom domain is deliberately absent — it lapsed and is now controlled by
+// a third party, so trusting it would hand API access to whoever owns it.
 // Additional origins (e.g. Vercel preview URLs) can be added via the
 // ALLOWED_ORIGINS env var (comma-separated) without a code change.
 const STATIC_ALLOWED_ORIGINS = [
-  'https://www.fpldatafetcher.online',
-  'https://fpldatafetcher.online',
   'https://fpl-data-fetch.vercel.app',
   'http://localhost:8080',
 ];

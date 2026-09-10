@@ -6,25 +6,26 @@ Just enter your league code and fetch live rankings, manager points, and gamewee
 ---
 
 ## 🌍 Live Site
-👉 [https://www.fpldatafetcher.online](https://www.fpldatafetcher.online)
+
+👉 [https://fpl-data-fetch.vercel.app](https://fpl-data-fetch.vercel.app)
 
 ---
 
 ## 🚀 Features
 
-- 🏆 Instantly fetch **league standings** using your FPL League ID  
-- 📊 View **manager points, ranks, and gameweek performance**  
-- 📅 Dynamic **Gameweek breakdown table**  
+- 🏆 Instantly fetch **league standings** using your FPL League ID
+- 📊 View **manager points, ranks, and gameweek performance**
+- 📅 Dynamic **Gameweek breakdown table**
 
 ---
 
 ## 🧩 Tech Stack
 
-- **Frontend:** React (Vite)  
-- **Styling:** Tailwind CSS + shadcn/ui  
-- **Hosting:** Render  
-- **Analytics:** Vercel Web Analytics  
-- **SEO:** Open Graph & meta tags  
+- **Frontend:** React (Vite)
+- **Styling:** Tailwind CSS + shadcn/ui
+- **Hosting:** Render
+- **Analytics:** Vercel Web Analytics
+- **SEO:** Open Graph & meta tags
 
 ---
 
@@ -32,7 +33,7 @@ Just enter your league code and fetch live rankings, manager points, and gamewee
 
 1. Enter your **FPL League ID** (you can find it in your league’s URL:  
    `https://fantasy.premierleague.com/leagues/123456/standings` → the league ID is `123456`).
-2. Click **Fetch League Data**.  
+2. Click **Fetch League Data**.
 3. Instantly see live standings, team points, and other insights!
 
 ---
@@ -53,3 +54,4 @@ npm install
 
 # Run the development server
 npm run dev
+```
