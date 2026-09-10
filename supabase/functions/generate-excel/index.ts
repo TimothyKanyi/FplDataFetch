@@ -1,8 +1,34 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+// CORS: allow only the app's known origins (custom domain, Vercel prod, local dev).
+// Additional origins (e.g. Vercel preview URLs) can be added via the
+// ALLOWED_ORIGINS env var (comma-separated) without a code change.
+const STATIC_ALLOWED_ORIGINS = [
+  'https://www.fpldatafetcher.online',
+  'https://fpldatafetcher.online',
+  'https://fpl-data-fetch.vercel.app',
+  'http://localhost:8080',
+];
+
+const EXTRA_ALLOWED_ORIGINS = (Deno.env.get("ALLOWED_ORIGINS") || "")
+  .split(",")
+  .map((o) => o.trim())
+  .filter(Boolean);
+
+const corsHeadersFor = (req: Request): Record<string, string> => {
+  const headers: Record<string, string> = {
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Vary': 'Origin',
+  };
+  const origin = req.headers.get('Origin');
+  if (
+    origin &&
+    (STATIC_ALLOWED_ORIGINS.includes(origin) || EXTRA_ALLOWED_ORIGINS.includes(origin))
+  ) {
+    headers['Access-Control-Allow-Origin'] = origin;
+  }
+  return headers;
 };
 
 interface Manager {
@@ -56,6 +82,8 @@ function escapeCSV(value: any): string {
 }
 
 serve(async (req) => {
+  const corsHeaders = corsHeadersFor(req);
+
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
