@@ -24,6 +24,27 @@ const chartTooltipStyle = {
   borderRadius: "8px",
 };
 
+// Shared by both bar charts. These sit side by side, so any difference in axis
+// height or gutter shifts one plot area relative to the other and they read as
+// misaligned. Keeping the config identical means the only visual difference
+// between them is the bar colour.
+const barChartMargin = { top: 8, right: 12, bottom: 0, left: 0 };
+
+const barXAxisProps = {
+  className: "text-muted-foreground",
+  angle: -45,
+  textAnchor: "end" as const,
+  height: 90,
+  tick: { fontSize: 11 },
+};
+
+const barYAxisProps = {
+  className: "text-muted-foreground",
+  width: 48,
+  allowDecimals: false,
+  tick: { fontSize: 11 },
+};
+
 // Memoized stat cards to prevent unnecessary re-renders
 const StatCard = memo(
   ({
@@ -117,16 +138,10 @@ export const Statistics = memo(({ leagueData, gameweekChampions, leagueCode, cur
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={topChampions}>
+              <BarChart data={topChampions} margin={barChartMargin}>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                <XAxis 
-                  dataKey="name" 
-                  className="text-muted-foreground"
-                  angle={-45}
-                  textAnchor="end"
-                  height={100}
-                />
-                <YAxis className="text-muted-foreground" />
+                <XAxis dataKey="name" {...barXAxisProps} />
+                <YAxis {...barYAxisProps} />
                 <Tooltip contentStyle={chartTooltipStyle} />
                 <Bar dataKey="wins" fill="hsl(var(--primary))" radius={[8, 8, 0, 0]} />
               </BarChart>
@@ -141,10 +156,10 @@ export const Statistics = memo(({ leagueData, gameweekChampions, leagueCode, cur
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={avgPointsPerGW}>
+              <BarChart data={avgPointsPerGW} margin={barChartMargin}>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                <XAxis dataKey="gameweek" className="text-muted-foreground" />
-                <YAxis className="text-muted-foreground" />
+                <XAxis dataKey="gameweek" {...barXAxisProps} />
+                <YAxis {...barYAxisProps} />
                 <Tooltip contentStyle={chartTooltipStyle} />
                 <Bar dataKey="average" fill="hsl(var(--accent))" radius={[8, 8, 0, 0]} />
               </BarChart>
