@@ -229,7 +229,7 @@ export const RankChart = memo(
                         return (
                           <Line
                             key={manager.entry}
-                            type="monotone"
+                            type="linear"
                             dataKey={String(manager.entry)}
                             name={manager.name}
                             stroke={
