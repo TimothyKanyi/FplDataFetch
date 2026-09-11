@@ -1,6 +1,6 @@
 import { memo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Trophy, ArrowLeftRight, Users, TrendingUp, Zap } from "lucide-react";
 import { contentVariants, springTransition, softSpringTransition } from "@/lib/animations";
 
@@ -32,9 +32,18 @@ export const AnimatedTabs = memo(({ children, defaultTab = "standings" }: Animat
     const content = children[tabId as keyof typeof children];
     if (!content) return null;
 
+    // Radix's TabsTrigger points aria-controls at a TabsContent id, but this
+    // component renders its own animated wrapper instead — so the panel needs
+    // its role and accessible name declared here, otherwise the tabs announce
+    // with no associated panel for screen readers.
+    const label = tabs.find((t) => t.id === tabId)?.label ?? tabId;
+
     return (
       <motion.div
         key={tabId}
+        id={`panel-${tabId}`}
+        role="tabpanel"
+        aria-label={label}
         variants={contentVariants}
         initial="hidden"
         animate="visible"

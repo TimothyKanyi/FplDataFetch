@@ -21,8 +21,8 @@ export default defineConfig(({ mode }) => ({
         short_name: "FPL Data",
         description:
           "Instantly view Fantasy Premier League standings for any mini-league.",
-        theme_color: "#0f172a",
-        background_color: "#0f172a",
+        theme_color: "#170C1D",
+        background_color: "#170C1D",
         display: "standalone",
         start_url: "/",
         icons: [
