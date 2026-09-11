@@ -42,6 +42,108 @@ const tooltipStyle = {
   fontSize: 12,
 };
 
+/**
+ * How many managers the hover tooltip lists before collapsing the remainder
+ * into a count. recharts' default tooltip renders one row per series, which at
+ * a typical mini-league size produces a panel tall enough to cover the chart
+ * itself; in a large league it would be unusable.
+ */
+const MAX_TOOLTIP_ROWS = 8;
+
+interface RankSeries {
+  entry: number;
+  name: string;
+  color: string;
+  isMine: boolean;
+}
+
+interface RankTooltipContentProps {
+  active?: boolean;
+  payload?: readonly { dataKey?: string | number; value?: number | string }[];
+  label?: string | number;
+  activeEntry: number | null;
+  managers: RankSeries[];
+}
+
+interface RankTooltipRow {
+  entry: number;
+  name: string;
+  rank: number;
+  series: RankSeries;
+}
+
+const RankTooltipContent = ({
+  active,
+  payload,
+  label,
+  activeEntry,
+  managers,
+}: RankTooltipContentProps) => {
+  if (!active || !payload?.length) return null;
+
+  const byEntry = new Map(managers.map((manager) => [manager.entry, manager]));
+
+  const rows = payload
+    .map((item): RankTooltipRow | null => {
+      const entry = Number(item.dataKey);
+      const series = byEntry.get(entry);
+      const rank = Number(item.value);
+      if (!series || !Number.isFinite(rank) || rank < 1) return null;
+      return { entry, name: series.name, rank, series };
+    })
+    .filter((row): row is RankTooltipRow => row !== null)
+    .sort((a, b) => a.rank - b.rank);
+
+  if (!rows.length) return null;
+
+  // Keep the line the visitor is actually pointing at in view even when it sits
+  // outside the leading positions, separated from the leaders by an ellipsis.
+  const pinnedIndex =
+    activeEntry === null ? -1 : rows.findIndex((row) => row.entry === activeEntry);
+  const pinned = pinnedIndex >= MAX_TOOLTIP_ROWS ? rows[pinnedIndex] : null;
+
+  const listed: Array<RankTooltipRow | null> = pinned
+    ? [...rows.slice(0, MAX_TOOLTIP_ROWS - 1), null, pinned]
+    : rows.slice(0, MAX_TOOLTIP_ROWS);
+
+  const remaining = rows.length - listed.filter(Boolean).length;
+
+  return (
+    <div style={tooltipStyle} className="max-w-[260px] px-3 py-2 shadow-md">
+      <p className="mb-1 font-semibold">Gameweek {label}</p>
+      <ul className="space-y-0.5">
+        {listed.map((row) =>
+          row === null ? (
+            <li key="ellipsis" className="pl-3.5 text-muted-foreground">
+              …
+            </li>
+          ) : (
+            <li key={row.entry} className="flex items-center gap-1.5">
+              <span
+                className="inline-block h-2 w-2 shrink-0 rounded-full"
+                style={{
+                  backgroundColor: row.series.isMine
+                    ? "hsl(var(--accent))"
+                    : row.series.color,
+                }}
+              />
+              <span className="tabular-nums text-muted-foreground">
+                {row.rank}.
+              </span>
+              <span className={row.series.isMine ? "font-semibold" : ""}>
+                {row.name}
+              </span>
+            </li>
+          )
+        )}
+      </ul>
+      {remaining > 0 && (
+        <p className="mt-1 text-muted-foreground">+{remaining} more</p>
+      )}
+    </div>
+  );
+};
+
 interface RankChartProps {
   leagueCode: string;
   leagueData: Manager[];
@@ -72,7 +174,7 @@ export const RankChart = memo(
       }
     }, [leagueCode]);
 
-    const managers = useMemo(
+    const managers = useMemo<RankSeries[]>(
       () =>
         series.map((item, index) => ({
           entry: item.entry,
@@ -218,8 +320,12 @@ export const RankChart = memo(
                       tick={{ fontSize: 11 }}
                     />
                     <Tooltip
-                      contentStyle={tooltipStyle}
-                      labelFormatter={(gameweek) => `Gameweek ${gameweek}`}
+                      content={
+                        <RankTooltipContent
+                          activeEntry={activeEntry}
+                          managers={managers}
+                        />
+                      }
                     />
                     {managers
                       .filter((manager) => !hiddenEntries.has(manager.entry))
