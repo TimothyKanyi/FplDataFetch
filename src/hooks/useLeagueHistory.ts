@@ -80,3 +80,70 @@ export const useLeagueSnapshot = (
     staleTime: 5 * 60 * 1000,
   });
 };
+
+/** One manager's league rank at each archived gameweek. */
+export interface RankHistorySeries {
+  entry: number;
+  player_name: string;
+  entry_name: string;
+  points: { gameweek: number; rank: number }[];
+}
+
+/**
+ * Pull every archived snapshot for a league and reshape them into one
+ * rank-per-gameweek series per manager, for the rank-over-time chart.
+ *
+ * The archive holds at most one row per gameweek (enforced by a unique index),
+ * so this is bounded by the number of completed gameweeks — 38 at most. The
+ * per-gameweek reads run in parallel, and one failing is skipped rather than
+ * blanking the whole chart.
+ */
+const fetchRankHistory = async (
+  leagueCode: string,
+  signal?: AbortSignal
+): Promise<RankHistorySeries[]> => {
+  const list = await fetchHistoryList(leagueCode, signal);
+  const gameweeks = list.map((item) => item.gameweek).sort((a, b) => a - b);
+  if (!gameweeks.length) return [];
+
+  const snapshots = await Promise.all(
+    gameweeks.map((gw) =>
+      fetchSnapshot(leagueCode, gw, signal).catch(() => null)
+    )
+  );
+
+  const byEntry = new Map<number, RankHistorySeries>();
+
+  gameweeks.forEach((gameweek, index) => {
+    const snapshot = snapshots[index];
+    if (!snapshot?.leagueData?.length) return;
+
+    snapshot.leagueData.forEach((manager) => {
+      let series = byEntry.get(manager.entry);
+      if (!series) {
+        series = {
+          entry: manager.entry,
+          player_name: manager.player_name,
+          entry_name: manager.entry_name,
+          points: [],
+        };
+        byEntry.set(manager.entry, series);
+      }
+      series.points.push({ gameweek, rank: manager.rank });
+    });
+  });
+
+  return [...byEntry.values()];
+};
+
+/**
+ * Rank-over-gameweek series for a league, built from archived snapshots.
+ */
+export const useRankHistory = (leagueCode: string | null) => {
+  return useQuery({
+    queryKey: ["rank-history", leagueCode],
+    queryFn: ({ signal }) => fetchRankHistory(leagueCode!, signal),
+    enabled: Boolean(leagueCode),
+    staleTime: 5 * 60 * 1000,
+  });
+};

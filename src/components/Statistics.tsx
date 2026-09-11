@@ -5,14 +5,16 @@ import { Award, TrendingUp, Target } from "lucide-react";
 import type { Manager, GameweekChampion } from "@/hooks/useFplData";
 import {
   useChampionStats,
-  useManagerConsistency,
   useAvgPointsPerGW,
   useGameweeks,
 } from "@/hooks/useFplComputed";
+import { RankChart } from "./RankChart";
 
 interface StatisticsProps {
   leagueData: Manager[];
   gameweekChampions: GameweekChampion[];
+  leagueCode: string;
+  currentGameweek?: number;
 }
 
 // Memoized chart configuration to prevent recreation
@@ -54,13 +56,12 @@ const StatCard = memo(
   )
 );
 
-export const Statistics = memo(({ leagueData, gameweekChampions }: StatisticsProps) => {
+export const Statistics = memo(({ leagueData, gameweekChampions, leagueCode, currentGameweek }: StatisticsProps) => {
   // Use memoized gameweeks - only recalculates when leagueData changes
   const gameweeks = useGameweeks(leagueData);
 
   // Use custom hooks for expensive computations
   const topChampions = useChampionStats(gameweekChampions);
-  const managersWithConsistency = useManagerConsistency(leagueData);
   const avgPointsPerGW = useAvgPointsPerGW(leagueData, gameweeks);
 
   // Memoized summary stats
@@ -100,6 +101,14 @@ export const Statistics = memo(({ leagueData, gameweekChampions }: StatisticsPro
         />
       </div>
 
+      {/* Full width: a bump chart with a line per manager needs the horizontal
+          room, and it was cramped sharing a row. */}
+      <RankChart
+        leagueCode={leagueCode}
+        leagueData={leagueData}
+        currentGameweek={currentGameweek}
+      />
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
@@ -127,50 +136,22 @@ export const Statistics = memo(({ leagueData, gameweekChampions }: StatisticsPro
 
         <Card>
           <CardHeader>
-            <CardTitle>Most Consistent Managers</CardTitle>
-            <CardDescription>Top 5 managers with the most stable performance</CardDescription>
+            <CardTitle>League Average Per Gameweek</CardTitle>
+            <CardDescription>Average points scored across all managers each gameweek</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              {managersWithConsistency.slice(0, 5).map((manager, index) => (
-                <div key={manager.entry} className="flex items-center justify-between border-b border-border pb-2 last:border-0">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
-                      {index + 1}
-                    </div>
-                    <div>
-                      <p className="font-medium">{manager.player_name}</p>
-                      <p className="text-xs text-muted-foreground">Avg: {manager.average} pts</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-bold text-accent">{manager.consistency}</p>
-                    <p className="text-xs text-muted-foreground">consistency</p>
-                  </div>
-                </div>
-              ))}
-            </div>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={avgPointsPerGW}>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                <XAxis dataKey="gameweek" className="text-muted-foreground" />
+                <YAxis className="text-muted-foreground" />
+                <Tooltip contentStyle={chartTooltipStyle} />
+                <Bar dataKey="average" fill="hsl(var(--accent))" radius={[8, 8, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
           </CardContent>
         </Card>
       </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>League Average Per Gameweek</CardTitle>
-          <CardDescription>Average points scored across all managers each gameweek</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={avgPointsPerGW}>
-              <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-              <XAxis dataKey="gameweek" className="text-muted-foreground" />
-              <YAxis className="text-muted-foreground" />
-              <Tooltip contentStyle={chartTooltipStyle} />
-              <Bar dataKey="average" fill="hsl(var(--accent))" radius={[8, 8, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
     </div>
   );
 });

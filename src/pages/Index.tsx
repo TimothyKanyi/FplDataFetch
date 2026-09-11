@@ -242,6 +242,7 @@ const Index = () => {
                 isLive={data.isLive}
                 fetchedAt={fetchedAt}
                 deadlineTime={data.deadlineTime}
+                leagueCode={fetchParams?.leagueCode ?? ""}
               />
               {/* Ad slot — below the standings table, not sticky. */}
               <AdBanner slot="xxxx" />

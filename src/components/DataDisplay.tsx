@@ -26,6 +26,7 @@ interface DataDisplayProps {
   isLive?: boolean;
   fetchedAt?: string;
   deadlineTime?: string;
+  leagueCode?: string;
 }
 
 /**
@@ -407,7 +408,7 @@ const VirtualizedManagerTable = memo(
   }
 );
 
-export const DataDisplay = memo(({ leagueData, gameweekChampions, currentGameweek, isLive, fetchedAt, deadlineTime }: DataDisplayProps) => {
+export const DataDisplay = memo(({ leagueData, gameweekChampions, currentGameweek, isLive, fetchedAt, deadlineTime, leagueCode }: DataDisplayProps) => {
   // Hooks must be called before any early return
   const gameweeks = useGameweeks(leagueData);
   const isHighestPoints = useIsHighestPoints(leagueData);
@@ -580,7 +581,7 @@ export const DataDisplay = memo(({ leagueData, gameweekChampions, currentGamewee
           stats: (
             <ErrorBoundary name="stats">
               <Suspense fallback={<EnhancedSkeleton type="stats" />}>
-                <Statistics leagueData={leagueData} gameweekChampions={gameweekChampions} />
+                <Statistics leagueData={leagueData} gameweekChampions={gameweekChampions} leagueCode={leagueCode ?? ""} currentGameweek={currentGameweek} />
               </Suspense>
             </ErrorBoundary>
           ),

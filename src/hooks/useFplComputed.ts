@@ -88,55 +88,6 @@ export const useChampionStats = (
   }, [gameweekChampions]);
 };
 
-interface ManagerConsistency {
-  entry: number;
-  player_name: string;
-  entry_name: string;
-  average: string;
-  consistency: string;
-}
-
-/**
- * Hook to calculate manager consistency scores
- * Uses standard deviation for consistency metric
- */
-export const useManagerConsistency = (
-  leagueData: Manager[] | null
-): ManagerConsistency[] => {
-  return useMemo(() => {
-    if (!leagueData?.length) return [];
-
-    return leagueData
-      .map((manager) => {
-        const points = Object.values(manager.gameweek_points);
-        if (!points.length) {
-          return {
-            entry: manager.entry,
-            player_name: manager.player_name,
-            entry_name: manager.entry_name,
-            average: "0",
-            consistency: "0",
-          };
-        }
-
-        const avg = points.reduce((a, b) => a + b, 0) / points.length;
-        const variance =
-          points.reduce((sum, p) => sum + Math.pow(p - avg, 2), 0) /
-          points.length;
-        const stdDev = Math.sqrt(variance);
-
-        return {
-          entry: manager.entry,
-          player_name: manager.player_name,
-          entry_name: manager.entry_name,
-          average: avg.toFixed(1),
-          consistency: (100 - stdDev).toFixed(1),
-        };
-      })
-      .sort((a, b) => Number(b.consistency) - Number(a.consistency));
-  }, [leagueData]);
-};
-
 interface AvgPointsPerGW {
   gameweek: string;
   average: string;
